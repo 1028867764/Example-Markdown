@@ -2152,15 +2152,55 @@ print(name?.toUpperCase() ?? '匿名'); // 输出 '匿名'（若 name 为 null�
 
 ## **3.1 函数基础语法**
 ### **3.1.1 标准函数定义**
-- 函数结构示意图
+#### **3.1.1.1 函数结构示意图**
 ```dart
 返回值的类型 函数名(参数a, 参数b...) {
       // 函数体
     return 返回值; // 非void类型需返回值
 }
 ```
+#### **3.1.1.2 `yield`**
+ `return` 会终止所处代码块的执行。但有的时候，我们希望函数在返回一个值的同时，不会终止当前函数的执行，这时候就要用到 `yield`
 
-- 传统写法与箭头函数
+- 使用 `return`（普通函数，会提前终止）：
+```dart
+Iterable<int> numbersWithReturn() {
+  for (int i = 0; i < 5; i++) {
+    return i;        // 执行到这里就直接返回，后面代码不会执行
+  }
+  print("这里永远不会打印");
+}
+
+void main() {
+  print(numbersWithReturn());  // 只输出 0
+}
+```
+
+- 使用 `yield`（生成器函数，不会终止）：
+```dart
+// 同步生成器
+Iterable<int> numbers() sync* {
+  for (int i = 0; i < 5; i++) {
+    yield i;         // 产生一个值，暂停，下次继续
+  }
+  print("生成器执行完毕！");
+}
+
+void main() {
+  for (var n in numbers()) {
+    print(n);
+  }
+  // 输出：
+  // 0
+  // 1
+  // 2
+  // 3
+  // 4
+  // 生成器执行完毕！
+}
+```
+
+#### **3.1.1.3 传统写法与箭头函数**
 ```dart
 // 传统写法（多行）
 int add(int a, int b) {
@@ -2170,8 +2210,7 @@ int add(int a, int b) {
 // 箭头函数（单行，自动返回）
 int multiply(int a, int b) => a * b;
 ```
-
-- print 函数返回 void
+#### **3.1.1.4 `print` 函数返回 `void`**
 ```dart
 void printMessage() => print('Hello, Dart!');
 ```
@@ -2742,6 +2781,67 @@ void main() {
    外函数(内函数b); // 使用内函数b作为回调
 }
 ```
+
+- 回调函数作为参数时的书写格式1
+```dart
+// 回调函数作为参数传入时，书写格式为 "返回值类型 Function(回调函数参数值的类型) 回调函数的名字" 
+
+// 1. 定义一个具名函数（加法）
+int add(int x, int y) {
+  return x + y;
+}
+
+// 2. 定义另一个具名函数（乘法）
+int multiply(int x, int y) {
+  return x * y;
+}
+
+// 3. 定义一个函数，接收两个数字和一个“算法回调”
+void calculate(int a, int b, int Function(int, int) compute) {
+  print("开始计算...");
+  int result = compute(a, b); 
+  print("计算结果是: $result");
+}
+
+void main() {
+  // 4. 直接传入函数名（注意：不要带括号，带括号就变成直接执行了）
+  calculate(10, 5, add); 
+  
+  calculate(10, 5, multiply);
+}
+
+/**
+ * 控制台输出结果：
+ * * 开始计算...
+ * 计算结果是: 15
+ * 开始计算...
+ * 计算结果是: 50
+ */
+```
+- 回调函数作为参数时的书写格式2
+```dart
+// 若回调参数既不接受参数，也不返回任何值时候，"void Function() 回调函数的名字" 还可以写作 "VoidCallback 回调函数的名字" 
+
+void runTask(VoidCallback action) {
+  print("准备开始执行...");
+  action(); // 调用传入的回调函数
+  print("任务执行完毕。");
+}
+
+void main() {
+  // 2. 传入一个匿名函数作为参数
+  runTask(() {
+    print("我是被传进来的回调逻辑！");
+  });
+}
+
+/*  控制台输出结果：
+准备开始执行...
+我是被传进来的回调逻辑！
+任务执行完毕。
+*/
+```
+
 ### 🧮 **示例1：数学处理** 
 ```dart
 // 定义一个函数，接收一个数字和一个回调函数，对数字进行处理
