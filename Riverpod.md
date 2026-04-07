@@ -181,6 +181,7 @@ class CatNotifier extends Notifier<CatState> {
 **注意要点：**
 - `build()` 方法只负责初始化状态，不要在构造函数中写逻辑。
 - 使用 `state = ...` 更新状态（Riverpod 会自动通知监听者重建 UI）。
+- 每次你执行 `state = 新状态对象` 时，旧的状态对象会被 Dart 的垃圾回收器（GC）自动回收，不会造成内存泄漏。
 - 所有业务方法都写在这里，保持单一职责。
 
 ### 5. 创建 Provider（全局注册）
@@ -193,7 +194,36 @@ final catProvider = NotifierProvider<CatNotifier, CatState>(CatNotifier.new);
 
 这个 Provider 一旦创建，全局任何地方都可以通过 `ref.watch(catProvider)` 读取状态，或 `ref.read(catProvider.notifier)` 调用方法。
 
-### 6. 在 UI 中使用（ConsumerStatefulWidget）
+### 6. 有时候需要加上 `autoDispose`（可选，非必需）
+
+```dart
+final abcProvider = NotifierProvider.autoDispose<AbcNotifier, AbcState>(
+  AbcNotifier.new,
+);
+```
+
+#### 加上 `autoDispose` 的作用：
+
+- 当用户离开当前页面（页面被 `pop`）时，如果没有其他地方继续监听这个 Provider，Riverpod 会**自动销毁** `Notifier` 及其管理的状态。
+- 下次再次进入该页面时，`build()` 方法会重新执行，状态恢复为初始值，避免状态“残留”。
+- 有效防止内存泄漏，尤其当页面较多、状态较多时特别有用。
+
+#### 什么时候不加 `autoDispose`？
+
+- 全局共享的状态，例如：
+  - 用户登录信息
+  - App 主题、语言设置
+  - 购物车数据（整个 App 生命周期都需要存在）
+  - 播放器状态等
+
+**这时应该使用普通版本：**
+```dart
+final userProvider = NotifierProvider<UserNotifier, UserState>(
+  UserNotifier.new,
+);
+```
+
+### 7. 在 UI 中使用（ConsumerStatefulWidget）
 
 **监听状态（ToSeePage）：**
 
@@ -262,7 +292,7 @@ void _turnCatOrange() {
   }
 ```
 
-### 7. 项目总代码
+### 8. 项目总代码
 main.dart
 ```dart
 import 'package:flutter/material.dart';
@@ -587,7 +617,7 @@ class _ToSeePageState extends ConsumerState<ToSeePage> {
 }
 ```
 
-### 8. 最佳实践与注意事项
+### 9. 最佳实践与注意事项
 
 1. **优先不可变状态**：始终用 `copyWith` 更新，不要直接修改对象内部属性。
 2. **区分 read 和 watch**：
@@ -608,7 +638,7 @@ class _ToSeePageState extends ConsumerState<ToSeePage> {
    - `AsyncNotifierProvider`：异步初始化（如从网络加载数据），推荐用于 API 调用。
 7. **Riverpod 版本注意**：Riverpod 2.x/3.x 中 `NotifierProvider` 是推荐方式，旧的 `StateNotifierProvider` 已不建议在新项目中使用。
 
-### 9. 别高兴的太早
+### 10. 别高兴的太早
 
  >缺点：虽然现在好像已经入门Riverpod了，但是，新的问题接踵而来。那就是，如果 CatState 的其中一个属性变了也会导致监听另一个属性的 widget 重建，岂不是会造成无意义的性能损耗？
 
