@@ -19,13 +19,203 @@
 
 
 # 1. 环境搭建与起步
-* **CLI 安装**：`dart pub global activate jaspr_cli`
-* **创建项目**：`jaspr create my_website`
-* **渲染模式选择**：
-    * **Static**：静态网站生成（SSG）。
-    * **Server**：带服务端渲染（SSR）的动态网站。
-    * **Client**：纯客户端渲染（类似 React/Vue SPA）。
 
+嗨！如果你是第一次接触 **Jaspr**，别担心。它是一个用纯 Dart 语言构建现代网站的框架，写法非常像 Flutter（组件化开发），但最终输出的是真正的 HTML + CSS + JS，而不是 Canvas。支持静态生成（SSG）、服务端渲染（SSR）和纯客户端渲染，超级灵活！
+
+## 1.1 第一步：安装 Jaspr CLI
+
+Jaspr 提供了一个命令行工具（CLI），能快速创建项目、启动开发服务器等。
+
+在终端运行以下命令（需要先安装好 Dart SDK，版本 >= 3.0）：
+
+```bash
+dart pub global activate jaspr_cli
+```
+
+**小贴士**：安装完成后，终端输入 `jaspr --version` 检查是否成功。如果提示命令不存在，可能需要把 Dart 的 bin 目录加入系统 PATH。
+
+## 1.2 第二步：创建新项目
+
+安装好 CLI 后，创建一个项目超级简单：
+
+```bash
+jaspr create my_website
+```
+
+命令会进入交互式向导，提示你选择几个选项：
+
+- **Rendering Mode（渲染模式）**：这是 Jaspr 的核心特性之一。
+- **Routing（路由）**：none（无路由）、multi-page（多页应用）或 single-page（SPA 单页应用）。
+- 其他可选模板（如文档站点模板）。
+
+**推荐新手先选默认或按 Enter 键使用推荐设置**。
+
+创建完成后，进入项目目录：
+
+```bash
+cd my_website
+```
+
+## 1.3 第三步：渲染模式选择（超级重要！）
+
+Jaspr 提供了三种渲染模式，根据你的网站需求选择：
+
+- **Static（静态网站生成 / SSG）**：
+  - 在构建时提前生成所有 HTML 文件。
+  - 优点：加载速度极快、SEO 友好、部署简单（直接扔到 Vercel/Netlify/GitHub Pages 即可）。
+  - 适合场景：博客、个人官网、营销落地页、文档站点。
+  - 缺点：内容基本静态，如果需要用户登录或实时数据就不太合适。
+
+- **Server（服务端渲染 / SSR）**：
+  - 每次用户请求页面时，服务器动态渲染 HTML。
+  - 优点：SEO 好、首屏快、支持动态数据（如数据库查询、用户个性化内容）。
+  - 适合场景：电商、博客（带评论）、需要后端逻辑的网站。
+  - Jaspr 会自动处理服务端和客户端的“hydration”（注水，让页面在浏览器端变得可交互）。
+
+- **Client（纯客户端渲染 / CSR，类似 React/Vue SPA）**：
+  - 所有渲染都在浏览器端进行（类似传统 SPA）。
+  - 优点：交互性强、适合高度动态的应用。
+  - 缺点：首屏加载可能稍慢，SEO 需要额外处理。
+  - 适合场景：后台管理系统、复杂交互的 Web App。
+
+**小白建议**：第一次尝试推荐选 **Server** 模式（功能最全），或者 **Static** 模式（最简单）。
+
+运行项目看效果（开发模式，支持热重载）：
+
+```bash
+jaspr serve
+```
+
+打开浏览器访问 `http://localhost:8080`（端口可能不同），就能看到你的网站啦！
+
+## 1.4 项目文件结构（新手必看）
+
+Jaspr 项目本质上就是一个标准的 Dart 项目。创建一个项目后，大致的文件结构如下（以 Server 模式为例）：
+
+```
+my_website/
+├── pubspec.yaml                 # 项目依赖配置文件（类似 package.json）
+├── pubspec.lock
+├── jaspr.yaml 或 pubspec.yaml 中的 jaspr: 配置  # 渲染模式等设置
+├── lib/                         # 主要代码目录（你的组件写在这里）
+│   ├── main.dart                # 入口文件（通常在这里 runApp）
+│   ├── app.dart                 # 根组件（App），类似 Flutter 的 MyApp
+│   └── components/              # 自定义组件文件夹（推荐按功能拆分）
+│       └── hello.dart
+├── web/                         # Web 特定资源（可选）
+│   ├── index.html               # HTML 入口模板
+│   └── styles.css               # 全局样式（或使用 Tailwind 等）
+├── build/                       # 构建输出目录（运行 jaspr build 后生成，不要手动修改）
+│   └── jaspr/
+└── README.md
+```
+
+**关键说明**：
+- **lib/** 是你主要写代码的地方，组件都放在这里。
+- **pubspec.yaml** 中会看到 `dependencies: jaspr: ^x.x.x`，以及 `jaspr: mode: server` 等配置。
+- 如果你选择了 Static 或 Client 模式，某些文件（如服务端入口）可能不同。
+- 资源文件（如图片、字体）可以放在 `web/assets/` 或 `lib/assets/`，根据需要引用。
+
+## 1.5 代码演示：写一个简单的 “Hello Jaspr” 页面
+
+创建项目后，打开 `lib/app.dart`（或 `lib/main.dart`，不同模板可能略有差异），可以看到类似下面的代码结构。
+
+### 1.5.1 示例 1：基础组件（StatelessComponent，类似 Flutter 的 StatelessWidget）
+
+```dart
+import 'package:jaspr/jaspr.dart';
+
+// 根组件
+class App extends StatelessComponent {
+  const App({super.key});
+
+  @override
+  Iterable<Component> build(BuildContext context) sync* {
+    // 使用 yield 来“产出”子组件，类似 Flutter 的 children
+    yield div(
+      classes: 'container',  // 可以加 CSS 类
+      styles: Styles(
+        padding: Padding.all(20.px),  // 内边距
+        backgroundColor: Colors.blue.shade50,
+      ),
+      children: [
+        h1(
+          classes: 'title',
+          children: [text('欢迎来到 Jaspr！👋')],  // .text() 是快捷方式
+        ),
+        p([
+          text('这是一个用 Dart 写的网站，支持 SSR/SSG。'),
+        ]),
+        // 你可以继续添加更多元素
+        button(
+          events: {
+            'onclick': (event) => print('按钮被点击了！'),  // 客户端事件
+          },
+          children: [text('点我试试')],
+        ),
+      ],
+    );
+  }
+}
+```
+
+**运行入口**（通常在 `lib/main.dart` 或对应文件中）：
+
+```dart
+import 'package:jaspr/jaspr.dart';
+import 'app.dart';
+
+void main() {
+  // 对于 Server/Static 模式，Jaspr 会自动处理
+  runApp(App());
+}
+```
+
+### 1.5.2 示例 2：使用 HTML 原生标签快捷方式（更简洁）
+
+Jaspr 提供了大量预定义组件，如 `div()`、`h1()`、`p()`、`button()` 等，直接使用：
+
+```dart
+yield div(classes: 'hero', [
+  h1([text('Jaspr 真香！')]),
+  p([text('告别复杂的前端框架，用 Dart 一统江湖。')]),
+]);
+```
+
+**小白注意**：
+- `build` 方法返回 `Iterable<Component>`，所以用 `sync*` + `yield`。
+- 样式可以用 `styles: Styles(...)`（类型安全），也可以用 CSS 类 + 外部样式表。
+- 交互（如点击事件）在客户端组件上生效（Server 模式下会自动 hydration）。
+
+想加更多功能？可以创建新文件 `lib/components/my_button.dart`，然后在 App 中导入使用。
+
+```dart
+// lib/components/my_button.dart
+import 'package:jaspr/jaspr.dart';
+
+class MyButton extends StatelessComponent {
+  final String label;
+  const MyButton(this.label, {super.key});
+
+  @override
+  Iterable<Component> build(BuildContext context) sync* {
+    yield button(classes: 'btn', children: [text(label)]);
+  }
+}
+```
+
+然后在 App 中：
+
+```dart
+yield MyButton('自定义按钮');
+```
+
+## 1.6 下一步建议
+
+1. 修改代码后保存，`jaspr serve` 会自动热重载（浏览器刷新看到变化）。
+2. 构建生产版本：`jaspr build`（根据模式生成不同输出）。
+3. 部署：Static 模式直接部署静态文件；Server 模式可部署到支持 Dart 的服务器或 Docker。
+4. 深入学习：官方文档（https://docs.jaspr.site）、JasprPad 在线 playground（https://playground.jaspr.site）。
 
 
 # 2. 组件系统 (The Component Model)
