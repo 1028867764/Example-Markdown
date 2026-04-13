@@ -2127,7 +2127,7 @@ Flutter → 每次请求带 token
 📌 token 自己携带身份信息
 
 
-### 🛠 5.1.2 安装 JWT（Laravel）
+### 5.1.2 安装 JWT（Laravel）
 
 ```bash
 composer require tymon/jwt-auth
