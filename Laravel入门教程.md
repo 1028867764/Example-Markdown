@@ -2106,3 +2106,1060 @@ PHP 配置
 Filament = Laravel 后台作弊器
 ```
 
+# 5. Laravel + Flutter 认证与权限
+
+为了让你更系统地掌握 **Laravel + Flutter** 的认证与权限体系，我为你梳理了一份核心知识点大纲。这套架构不仅适用于登录，也是现代移动端前后端分离开发的通用标准。
+
+
+## 5.1 认证机制选择 (Authentication Strategies)
+
+### 5.1.1 为什么移动端不用 Session？
+
+传统 Web（比如 PHP + Blade）：
+
+```text
+浏览器 → 登录 → 服务器返回 Cookie → 浏览器自动带 Cookie
+```
+
+👉 但 Flutter：
+
+* 没有浏览器环境
+* 不自动管理 Cookie
+* 跨平台复杂
+
+👉 所以用 **Token（令牌）**
+
+
+### 5.1.2 Sanctum vs Passport vs JWT
+
+| 方案        | 适合场景      | 难度   |
+| --------- | --------- | ---- |
+| Sanctum ✅ | App / SPA | ⭐    |
+| Passport  | OAuth2    | ⭐⭐⭐⭐ |
+| JWT       | 自定义认证     | ⭐⭐⭐  |
+
+👉 **结论：你现在就用 Sanctum**
+
+
+### 5.1.3 安装 Sanctum
+
+```bash
+composer require laravel/sanctum
+```
+
+发布配置：
+
+```bash
+php artisan vendor:publish --provider="Laravel\Sanctum\SanctumServiceProvider"
+```
+
+迁移数据库：
+
+```bash
+php artisan migrate
+```
+
+
+### 5.1.4 配置 User 模型
+
+```php
+use Laravel\Sanctum\HasApiTokens;
+
+class User extends Authenticatable
+{
+    use HasApiTokens; // ✅ 必须加这个
+
+    // 允许批量赋值字段
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+    ];
+
+    // 隐藏字段（不会返回给前端）
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+}
+```
+
+
+## 5.2 Laravel 后端核心
+
+
+### 5.2.1 创建 AuthController
+
+```bash
+php artisan make:controller Api/AuthController
+```
+
+
+### 5.2.2 注册接口
+
+```php
+public function register(Request $request)
+{
+    // ✅ 数据验证
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'email' => 'required|email|unique:users',
+        'password' => 'required|min:6'
+    ]);
+
+    // ✅ 创建用户
+    $user = User::create([
+        'name' => $request->name,
+        'email' => $request->email,
+        // 🔐 密码必须加密
+        'password' => bcrypt($request->password),
+    ]);
+
+    // ✅ 创建 Token
+    $token = $user->createToken('app-token')->plainTextToken;
+
+    return response()->json([
+        'user' => $user,
+        'token' => $token
+    ]);
+}
+```
+
+
+### 5.2.3 登录接口
+
+```php
+public function login(Request $request)
+{
+    // ✅ 验证输入
+    $request->validate([
+        'email' => 'required|email',
+        'password' => 'required'
+    ]);
+
+    // 🔍 查找用户
+    $user = User::where('email', $request->email)->first();
+
+    // ❌ 用户不存在 或 密码错误
+    if (!$user || !Hash::check($request->password, $user->password)) {
+        return response()->json([
+            'message' => 'Invalid credentials'
+        ], 401);
+    }
+
+    // 🧹 删除旧 Token（可选）
+    $user->tokens()->delete();
+
+    // 🎫 创建新 Token
+    $token = $user->createToken('app-token')->plainTextToken;
+
+    return response()->json([
+        'user' => $user,
+        'token' => $token
+    ]);
+}
+```
+
+
+### 5.2.4 登出接口
+
+```php
+public function logout(Request $request)
+{
+    // ❌ 删除当前 Token
+    $request->user()->currentAccessToken()->delete();
+
+    return response()->json([
+        'message' => 'Logged out'
+    ]);
+}
+```
+
+
+### 5.2.5 保护路由（重点）
+
+```php
+Route::middleware('auth:sanctum')->group(function () {
+
+    Route::get('/user', function (Request $request) {
+        return $request->user();
+    });
+
+    Route::post('/logout', [AuthController::class, 'logout']);
+
+});
+```
+
+👉 没 Token 访问会返回：
+
+```json
+401 Unauthorized
+```
+
+
+### 5.2.6 Token 权限（Abilities）
+
+```php
+$token = $user->createToken('admin-token', ['create', 'delete']);
+```
+
+检查权限：
+
+```php
+if ($request->user()->tokenCan('delete')) {
+    // 可以删除
+}
+```
+
+
+## 5.3 Flutter 前端（核心重点🔥）
+
+
+### 5.3.1 安装依赖
+
+```yaml
+dio: ^5.0.0
+flutter_secure_storage: ^9.0.0
+```
+
+
+### 5.3.2 Token 安全存储
+
+```dart
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+class TokenStorage {
+  final _storage = FlutterSecureStorage();
+
+  // 保存 Token
+  Future<void> saveToken(String token) async {
+    await _storage.write(key: 'token', value: token);
+  }
+
+  // 获取 Token
+  Future<String?> getToken() async {
+    return await _storage.read(key: 'token');
+  }
+
+  // 删除 Token
+  Future<void> deleteToken() async {
+    await _storage.delete(key: 'token');
+  }
+}
+```
+
+
+### 5.3.3 Dio 封装（非常重要🔥）
+
+```dart
+import 'package:dio/dio.dart';
+
+class ApiClient {
+  late Dio dio;
+  final storage = TokenStorage();
+
+  ApiClient() {
+    dio = Dio(
+      BaseOptions(
+        baseUrl: "http://your-api.com/api",
+        connectTimeout: Duration(seconds: 5),
+      ),
+    );
+
+    // 🔥 请求拦截器
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          String? token = await storage.getToken();
+
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+
+          return handler.next(options);
+        },
+
+        // ❗ 响应拦截器
+        onError: (error, handler) async {
+          if (error.response?.statusCode == 401) {
+            // 🔥 Token 失效
+            await storage.deleteToken();
+
+            // 👉 可以跳转登录页
+          }
+
+          return handler.next(error);
+        },
+      ),
+    );
+  }
+}
+```
+
+
+### 5.3.4 登录请求
+
+```dart
+Future<void> login(String email, String password) async {
+  final response = await dio.post('/login', data: {
+    'email': email,
+    'password': password,
+  });
+
+  String token = response.data['token'];
+
+  await storage.saveToken(token);
+}
+```
+
+
+### 5.3.5 获取用户信息
+
+```dart
+Future<void> getUser() async {
+  final response = await dio.get('/user');
+
+  print(response.data);
+}
+```
+
+
+### 5.3.6 Riverpod 状态（推荐🔥）
+
+```dart
+final authProvider = StateProvider<bool>((ref) => false);
+```
+
+登录成功：
+
+```dart
+ref.read(authProvider.notifier).state = true;
+```
+
+
+## 5.4 权限系统（Authorization）
+
+
+### 5.4.1 Gate 示例
+
+```php
+Gate::define('is-admin', function ($user) {
+    return $user->role === 'admin';
+});
+```
+
+使用：
+
+```php
+if (Gate::allows('is-admin')) {
+    // 是管理员
+}
+```
+
+
+### 5.4.2 Policy 示例
+
+```bash
+php artisan make:policy PostPolicy
+```
+
+```php
+public function update(User $user, Post $post)
+{
+    return $user->id === $post->user_id;
+}
+```
+
+控制器中：
+
+```php
+$this->authorize('update', $post);
+```
+
+
+### 5.4.3 Flutter 控制 UI
+
+```dart
+if (user.role == 'admin') {
+  return ElevatedButton(
+    onPressed: () {},
+    child: Text("删除"),
+  );
+}
+```
+
+
+## 5.5 安全最佳实践（非常重要🔥）
+
+### 5.5.1 强制 HTTPS
+
+```env
+APP_URL=https://yourdomain.com
+```
+
+
+### 5.5.2 限流（防爆破）
+
+```php
+Route::post('/login', [AuthController::class, 'login'])
+    ->middleware('throttle:5,1'); // 1分钟最多5次
+```
+
+
+### 5.5.3 Token 过期
+
+```php
+// config/sanctum.php
+'expiration' => 60, // 分钟
+```
+
+
+### 5.5.4 不暴露错误
+
+❌ 错误写法：
+
+```php
+return $e->getMessage();
+```
+
+✅ 正确：
+
+```php
+return response()->json([
+    'message' => 'Server Error'
+], 500);
+```
+
+# 6. Laravel + Flutter CRUD
+
+本章节将带你从 **0基础** 学会：
+
+* Laravel 后端如何写 CRUD API
+* Flutter 如何调用接口
+* 前后端如何联动
+
+
+## 6.1 什么是 CRUD？
+
+CRUD = 四个基本操作：
+
+| 操作     | 含义   |
+| ------ | ---- |
+| Create | 创建数据 |
+| Read   | 读取数据 |
+| Update | 更新数据 |
+| Delete | 删除数据 |
+
+我们将实现一个简单的「商品管理系统」。
+
+
+## 6.2 Laravel 后端部分
+
+### 6.2.1 创建项目
+
+```bash
+composer create-project laravel/laravel my_project
+cd my_project
+php artisan serve
+```
+
+访问：
+
+```
+http://127.0.0.1:8000
+```
+
+
+### 6.2.2 配置数据库
+
+打开 `.env`
+
+```env
+DB_DATABASE=my_db
+DB_USERNAME=root
+DB_PASSWORD=123456
+```
+
+然后执行迁移：
+
+```bash
+php artisan migrate
+```
+
+
+### 6.2.3 创建模型 + 迁移
+
+```bash
+php artisan make:model Product -m
+```
+
+#### 修改迁移文件
+
+```php
+public function up()
+{
+    Schema::create('products', function (Blueprint $table) {
+        $table->id(); // 主键
+        $table->string('name'); // 商品名
+        $table->decimal('price', 8, 2); // 价格
+        $table->text('description')->nullable(); // 描述
+        $table->timestamps(); // 创建时间 + 更新时间
+    });
+}
+```
+
+执行：
+
+```bash
+php artisan migrate
+```
+
+
+### 6.2.4 创建控制器
+
+```bash
+php artisan make:controller Api/ProductController
+```
+
+
+### 6.2.5 编写 CRUD API
+#### 6.2.5.1 代码模板：
+```php
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\Product;
+
+class ProductController extends Controller
+{
+    // 获取所有数据 (READ)
+    public function index()
+    {
+        return response()->json(Product::all());
+    }
+
+    // 创建数据 (CREATE)
+    public function store(Request $request)
+    {
+        // 验证
+        $request->validate([
+            'name' => 'required',
+            'price' => 'required|numeric'
+        ]);
+
+        // 创建
+        $product = Product::create($request->all());
+
+        return response()->json($product);
+    }
+
+    // 查看单个
+    public function show($id)
+    {
+        return Product::findOrFail($id);
+    }
+
+    // 更新 (UPDATE)
+    public function update(Request $request, $id)
+    {
+        $product = Product::findOrFail($id);
+        $product->update($request->all());
+
+        return response()->json($product);
+    }
+
+    // 删除 (DELETE)
+    public function destroy($id)
+    {
+        Product::destroy($id);
+
+        return response()->json(['message' => 'deleted']);
+    }
+}
+```
+
+#### 6.2.5.2 详细讲解：
+```php
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\Product;
+
+class ProductController extends Controller
+{
+    // ========================
+    // 1️⃣ 查询所有数据（READ）
+    // ========================
+    public function index()
+    {
+        // Product::all()
+        // 👉 查询数据库 products 表里的“所有数据”
+        
+        // response()->json()
+        // 👉 返回 JSON 格式给前端（Flutter）
+        return response()->json(Product::all());
+    }
+
+
+    // ========================
+    // 2️⃣ 创建数据（CREATE）
+    // ========================
+    public function store(Request $request)
+    {
+        // $request = 前端传过来的数据（JSON）
+
+        // ✅ Laravel 内置：数据验证（非常强！）
+        $request->validate([
+            'name' => 'required',        // 必填
+            'price' => 'required|numeric' // 必填 + 必须是数字
+        ]);
+
+        // ✅ Laravel ORM（Eloquent）
+        // create() = 插入数据库
+        // $request->all() = 获取所有字段
+        $product = Product::create($request->all());
+
+        // 返回创建后的数据
+        return response()->json($product);
+    }
+
+
+    // ========================
+    // 3️⃣ 查询单个数据（READ 单个）
+    // ========================
+    public function show($id)
+    {
+        // findOrFail()
+        // 👉 根据 id 查找
+        // 👉 找不到会自动返回 404（超方便！）
+        return Product::findOrFail($id);
+    }
+
+
+    // ========================
+    // 4️⃣ 更新数据（UPDATE）
+    // ========================
+    public function update(Request $request, $id)
+    {
+        // 先查到这条数据
+        $product = Product::findOrFail($id);
+
+        // update()
+        // 👉 更新数据库
+        // 👉 传什么字段就更新什么
+        $product->update($request->all());
+
+        return response()->json($product);
+    }
+
+
+    // ========================
+    // 5️⃣ 删除数据（DELETE）
+    // ========================
+    public function destroy($id)
+    {
+        // destroy()
+        // 👉 根据 id 删除数据
+        Product::destroy($id);
+
+        return response()->json([
+            'message' => 'deleted'
+        ]);
+    }
+}
+```
+
+#### 6.2.5.3 补充：批量删除
+- Controller 写法：
+```php
+public function batchDelete(Request $request)
+{
+    $ids = $request->input('ids');
+
+    if (!$ids || !is_array($ids)) {
+        return response()->json([
+            'message' => 'Invalid IDs'
+        ], 400);
+    }
+
+    // 批量删除
+    $deleted = Product::whereIn('id', $ids)->delete();
+
+    return response()->json([
+        'message' => 'Deleted successfully',
+        'deleted_count' => $deleted
+    ]);
+}
+```
+- 路由配置：
+```php
+Route::delete('/products/batch-delete', [ProductController::class, 'batchDelete']);
+```
+- 前端请求：Flutter 用 Dio 可以这样传👇
+```json
+DELETE /api/products/batch-delete
+
+{
+  "ids": [1, 2, 3, 4]
+}
+```
+
+
+### 6.2.6 添加状态码
+在基于 Laravel 的 CRUD API 开发过程中，合理设置 HTTP 状态码是接口设计的重要组成部分。状态码不仅用于描述请求处理结果，还能帮助前端（如 Flutter + Dio）快速判断请求是否成功，从而进行相应的业务处理。
+
+
+#### 6.2.6.1 状态码的作用
+
+HTTP 状态码用于表示服务器对请求的处理结果，主要作用包括：
+
+* 标识请求是否成功（如 200、201）
+* 标识客户端错误（如 400、404）
+* 标识服务器错误（如 500）
+* 提供统一的前后端交互语义
+
+
+#### 6.2.6.2 Laravel 中设置状态码的方法
+
+Laravel 提供了统一的响应构造方式，可通过 `response()` 辅助函数设置状态码：
+
+```php
+return response()->json([
+    'message' => 'success'
+], 200);
+```
+
+其中：
+
+* 第一个参数为返回数据
+* 第二个参数为 HTTP 状态码
+
+
+#### 6.2.6.3 常用状态码规范
+
+在本项目中，推荐使用如下状态码约定：
+
+| 状态码 | 含义                    | 使用场景         |
+| --- | --------------------- | ------------ |
+| 200 | OK                    | 请求成功（查询、删除等） |
+| 201 | Created               | 创建成功         |
+| 204 | No Content            | 删除成功且无返回数据   |
+| 400 | Bad Request           | 参数错误         |
+| 401 | Unauthorized          | 未登录或认证失败     |
+| 403 | Forbidden             | 无权限          |
+| 404 | Not Found             | 资源不存在        |
+| 500 | Internal Server Error | 服务器异常        |
+
+
+#### 6.2.6.4 批量删除接口示例
+
+##### （1）返回删除结果
+
+```php
+return response()->json([
+    'deleted_count' => $deleted
+], 200);
+```
+
+##### （2）无返回内容（推荐 RESTful 风格）
+
+```php
+return response()->noContent(); // 状态码 204
+```
+
+---
+
+#### 6.2.6.5 错误响应示例
+
+```php
+return response()->json([
+    'message' => 'Invalid IDs'
+], 400);
+```
+
+
+#### 6.2.6.6 前端（Flutter）对状态码的处理
+
+在 Flutter 中使用 Dio 发起请求时，状态码会自动包含在响应对象中：
+
+```dart
+Response response = await dio.delete('/api/products');
+
+print(response.statusCode);
+```
+
+需要注意：
+
+* 当状态码为 **2xx** 时，Dio 默认认为请求成功
+* 当状态码为 **非 2xx** 时，Dio 会抛出异常（DioException）
+
+示例：
+
+```dart
+try {
+  final response = await dio.delete('/api/products');
+
+  if (response.statusCode == 200) {
+    // 处理成功逻辑
+  }
+
+} on DioException catch (e) {
+  final statusCode = e.response?.statusCode;
+  // 处理错误逻辑
+}
+```
+
+#### 6.2.6.7 推荐的统一响应结构
+
+为了提高接口可维护性，建议在返回数据中增加业务状态码字段：
+
+```php
+return response()->json([
+    'code' => 0,
+    'message' => 'success',
+    'data' => null
+], 200);
+```
+
+说明：
+
+* HTTP 状态码：用于表示请求层级结果
+* `code` 字段：用于表示业务逻辑结果
+* `message`：提示信息
+* `data`：返回数据
+
+
+### 6.2.7 设置模型可填充字段
+
+打开 `Product.php`
+
+```php
+protected $fillable = [
+    'name',
+    'price',
+    'description'
+];
+```
+
+⚠️ 不写这个会报错（Laravel 安全机制）
+
+
+### 6.2.8 配置路由
+
+- 打开 `routes/api.php`
+- 模板代码：
+```php
+use App\Http\Controllers\Api\ProductController;
+
+Route::get('/products', [ProductController::class, 'index']);
+Route::post('/products', [ProductController::class, 'store']);
+Route::get('/products/{id}', [ProductController::class, 'show']);
+Route::put('/products/{id}', [ProductController::class, 'update']);
+Route::delete('/products/{id}', [ProductController::class, 'destroy']);
+```
+- 详细讲解：
+
+```php
+use App\Http\Controllers\Api\ProductController; 
+// ↑ 引入控制器（必须写完整命名空间）
+
+// ========================
+// 基础 CRUD 路由写法说明
+// ========================
+
+// Route::请求方式('URL路径', [控制器类::class, '方法名']);
+
+// 1️⃣ 获取所有商品（READ）
+Route::get('/products', [ProductController::class, 'index']);
+// GET 请求
+// 访问：http://127.0.0.1:8000/api/products
+// 调用：ProductController 里的 index() 方法
+
+
+// 2️⃣ 创建商品（CREATE）
+Route::post('/products', [ProductController::class, 'store']);
+// POST 请求
+// 用于提交数据（新增）
+// 数据从 body 传过去（JSON）
+
+
+// 3️⃣ 获取单个商品（READ 单个）
+Route::get('/products/{id}', [ProductController::class, 'show']);
+// {id} = 动态参数（变量）
+// 例如：/products/1
+// Laravel 会自动把 1 传给 show($id)
+
+
+// 4️⃣ 更新商品（UPDATE）
+Route::put('/products/{id}', [ProductController::class, 'update']);
+// PUT 请求（也可以用 PATCH）
+// 表示修改某一条数据
+// 同样通过 {id} 指定是哪一条
+
+
+// 5️⃣ 删除商品（DELETE）
+Route::delete('/products/{id}', [ProductController::class, 'destroy']);
+// DELETE 请求
+// 删除指定 id 的数据
+```
+
+## 6.3 使用 Bruno 测试 API
+
+### 6.3.1 创建
+
+```
+POST /api/products
+```
+
+Body:
+
+```json
+{
+  "name": "iPhone",
+  "price": 9999
+}
+```
+
+
+## 6.4 Flutter 前端部分
+
+### 6.4.1 添加依赖
+
+```yaml
+dependencies:
+  dio: ^5.0.0
+```
+
+
+### 6.4.2 创建 API 类
+
+```dart
+import 'package:dio/dio.dart';
+
+class ApiService {
+  final Dio dio = Dio(BaseOptions(
+    baseUrl: 'http://127.0.0.1:8000/api'
+  ));
+
+  // 获取列表
+  Future getProducts() async {
+    return await dio.get('/products');
+  }
+
+  // 添加
+  Future addProduct(Map data) async {
+    return await dio.post('/products', data: data);
+  }
+
+  // 更新
+  Future updateProduct(int id, Map data) async {
+    return await dio.put('/products/$id', data: data);
+  }
+
+  // 删除
+  Future deleteProduct(int id) async {
+    return await dio.delete('/products/$id');
+  }
+}
+```
+
+
+### 6.4.3 显示列表
+
+```dart
+class ProductPage extends StatefulWidget {
+  @override
+  _ProductPageState createState() => _ProductPageState();
+}
+
+class _ProductPageState extends State<ProductPage> {
+  List products = [];
+  final api = ApiService();
+
+  @override
+  void initState() {
+    super.initState();
+    loadData();
+  }
+
+  void loadData() async {
+    var res = await api.getProducts();
+    setState(() {
+      products = res.data;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('商品列表')),
+      body: ListView.builder(
+        itemCount: products.length,
+        itemBuilder: (_, i) {
+          var item = products[i];
+          return ListTile(
+            title: Text(item['name']),
+            subtitle: Text(item['price'].toString()),
+          );
+        },
+      ),
+    );
+  }
+}
+```
+
+
+### 6.4.4 添加数据
+
+```dart
+api.addProduct({
+  "name": "MacBook",
+  "price": 15000
+});
+```
+
+
+### 6.4.5 删除数据
+
+```dart
+api.deleteProduct(1);
+```
+
+
+
+## 6.5 常见坑（非常重要）
+
+### 6.5.1 跨域问题
+
+安装：
+
+```bash
+composer require fruitcake/laravel-cors
+```
+
+
+
+### 6.5.2 访问地址问题
+
+手机不能用：
+
+```
+127.0.0.1
+```
+
+必须改为：
+
+```
+电脑IP
+```
+
+
+### 6.5.3 端口问题
+
+确保：
+
+```
+8000 已开放
+```
