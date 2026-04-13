@@ -2532,100 +2532,192 @@ app.mount('#app')
 
 ```html
 <template>
-  <div style="padding: 20px">
+  <!-- 整体：左右两列 -->
+  <div style="display: flex; height: 100vh; margin: 0; padding: 0; overflow: hidden;">
 
-    <h1>Element Plus 综合演示</h1>
+    <!-- ====================== 左侧：固定导航栏（永远钉在左边，超长内部滚动） ====================== -->
+    <div style="width: 240px; background: #fff; border-right: 1px solid #e8e8e8; display: flex; flex-direction: column;">
+      <h3 style="padding: 18px; margin: 0; border-bottom: 1px solid #e8e8e8; text-align: center;">
+        左侧固定导航
+      </h3>
+      <!-- 内部滚动 -->
+      <div style="flex: 1; overflow-y: auto;">
+        <el-menu mode="vertical" default-active="1">
+          <el-menu-item index="1">首页</el-menu-item>
 
-    <!-- 按钮 -->
-    <h2>按钮</h2>
-    <el-button>默认</el-button>
-    <el-button type="primary" @click="handleClick">主要按钮</el-button>
-    <el-button type="success">成功</el-button>
-    <el-button type="danger">危险</el-button>
+          <el-sub-menu index="2">
+            <template #title>商品管理</template>
+            <el-menu-item index="2-1">商品列表</el-menu-item>
+            <el-menu-item index="2-2">添加商品</el-menu-item>
+            <el-menu-item index="2-3">编辑商品</el-menu-item>
+            <el-menu-item index="2-4">商品分类</el-menu-item>
+            <el-menu-item index="2-5">商品标签</el-menu-item>
+          </el-sub-menu>
 
-    <!-- 图标 -->
-    <h2>图标</h2>
-    <el-button :icon="Edit">编辑</el-button>
-    <el-button :icon="Delete" type="danger">删除</el-button>
+          <el-sub-menu index="3">
+            <template #title>订单管理</template>
+            <el-menu-item index="3-1">全部订单</el-menu-item>
+            <el-menu-item index="3-2">待付款</el-menu-item>
+            <el-menu-item index="3-3">待发货</el-menu-item>
+            <el-menu-item index="3-4">待收货</el-menu-item>
+          </el-sub-menu>
 
-    <!-- 提示 -->
-    <h2>提示</h2>
-    <el-button @click="showMessage">点击提示</el-button>
+          <el-sub-menu index="4">
+            <template #title>用户管理</template>
+            <el-menu-item index="4-1">用户列表</el-menu-item>
+            <el-menu-item index="4-2">用户等级</el-menu-item>
+            <el-menu-item index="4-3">用户反馈</el-menu-item>
+          </el-sub-menu>
 
-    <!-- 输入框 -->
-    <h2>输入框</h2>
-    <el-input v-model="input" placeholder="输入点什么" />
+          <el-sub-menu index="5">
+            <template #title>系统设置</template>
+            <el-menu-item index="5-1">基础设置</el-menu-item>
+            <el-menu-item index="5-2">权限管理</el-menu-item>
+            <el-menu-item index="5-3">日志管理</el-menu-item>
+          </el-sub-menu>
 
-    <!-- 单选 -->
-    <h2>单选</h2>
-    <el-radio-group v-model="radio">
-      <el-radio label="1">选项1</el-radio>
-      <el-radio label="2">选项2</el-radio>
-    </el-radio-group>
+          <el-menu-item index="6">数据统计</el-menu-item>
+          <el-menu-item index="7">运营管理</el-menu-item>
+          <el-menu-item index="8">消息通知</el-menu-item>
+          <el-menu-item index="9">安全中心</el-menu-item>
+          <el-menu-item index="10">帮助中心</el-menu-item>
+        </el-menu>
+      </div>
+    </div>
 
-    <!-- 复选 -->
-    <h2>复选</h2>
-    <el-checkbox-group v-model="checkList">
-      <el-checkbox label="A">A</el-checkbox>
-      <el-checkbox label="B">B</el-checkbox>
-    </el-checkbox-group>
+    <!-- ====================== 右侧整体：上下结构（顶部导航 + 正文内容） ====================== -->
+    <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
 
-    <!-- 下拉 -->
-    <h2>下拉框</h2>
-    <el-select v-model="select" placeholder="请选择">
-      <el-option label="苹果" value="apple" />
-      <el-option label="香蕉" value="banana" />
-    </el-select>
+      <!-- 右侧上部：顶部导航栏（你原来的，完全没动） -->
+      <div style="padding: 0 20px; border-bottom: 1px solid #e8e8e8;">
+        <h2>导航菜单</h2>
+        <el-menu
+          @select="handleSelect"
+          mode="horizontal"
+        >
+          <el-menu-item index="1">首页</el-menu-item>
+          <el-sub-menu index="2">
+            <template #title>商品管理</template>
+            <el-menu-item index="2-1">商品列表</el-menu-item>
+            <el-menu-item index="2-2">添加商品</el-menu-item>
+          </el-sub-menu>
+          <el-menu-item index="3">关于</el-menu-item>
+          <el-sub-menu index="4">
+            <template #title>示例</template>
+            <el-menu-item index="4-1">示例1</el-menu-item>
+            <el-menu-item index="4-2">示例2</el-menu-item>
+            <el-menu-item index="4-3">示例3</el-menu-item>
+            <el-menu-item index="4-4">示例4</el-menu-item>
+          </el-sub-menu>
+        </el-menu>
+      </div>
 
-    <!-- 日期 -->
-    <h2>日期选择</h2>
-    <el-date-picker v-model="date" type="date" />
+      <!-- 右侧下部：正文内容（你原来所有代码 + 表格加多列） -->
+      <div style="flex: 1; padding: 20px; overflow-y: auto;">
+        <h1>Element Plus 综合演示</h1>
 
-    <!-- Tabs -->
-    <h2>标签页</h2>
-    <el-tabs v-model="tab">
-      <el-tab-pane label="用户" name="1">用户内容</el-tab-pane>
-      <el-tab-pane label="设置" name="2">设置内容</el-tab-pane>
-    </el-tabs>
+        <!-- 按钮 -->
+        <h2>按钮</h2>
+        <el-button>默认</el-button>
+        <el-button type="primary" @click="handleClick">主要按钮</el-button>
+        <el-button type="success">成功</el-button>
+        <el-button type="danger">危险</el-button>
 
-    <!-- 表单 -->
-    <h2>表单</h2>
-    <el-form :model="form" label-width="80px">
-      <el-form-item label="用户名">
-        <el-input v-model="form.username" />
-      </el-form-item>
-      <el-form-item label="密码">
-        <el-input v-model="form.password" type="password" />
-      </el-form-item>
-      <el-button type="primary" @click="submitForm">提交</el-button>
-    </el-form>
+        <!-- 图标 -->
+        <h2>图标</h2>
+        <el-button :icon="Edit">编辑</el-button>
+        <el-button :icon="Delete" type="danger">删除</el-button>
 
-    <!-- 对话框 -->
-    <h2>对话框</h2>
-    <el-button @click="dialog = true">打开</el-button>
+        <!-- 提示 -->
+        <h2>提示</h2>
+        <el-button @click="showMessage">点击提示</el-button>
 
-    <el-dialog v-model="dialog" title="提示">
-      这是一个弹窗
-      <template #footer>
-        <el-button @click="dialog = false">取消</el-button>
-        <el-button type="primary" @click="dialog = false">确定</el-button>
-      </template>
-    </el-dialog>
+        <!-- 输入框 -->
+        <h2>输入框</h2>
+        <el-input v-model="input" placeholder="输入点什么" />
 
-    <!-- 表格 -->
-    <h2>表格</h2>
-    <el-table :data="tableData" style="width: 100%">
-      <el-table-column prop="name" label="姓名" />
-      <el-table-column prop="age" label="年龄" />
-    </el-table>
+        <!-- 单选 -->
+        <h2>单选</h2>
+        <el-radio-group v-model="radio">
+          <el-radio label="1">选项1</el-radio>
+          <el-radio label="2">选项2</el-radio>
+        </el-radio-group>
 
-    <!-- 分页 -->
-    <h2>分页</h2>
-    <el-pagination
-      v-model:current-page="page"
-      :page-size="5"
-      :total="20"
-    />
+        <!-- 复选 -->
+        <h2>复选</h2>
+        <el-checkbox-group v-model="checkList">
+          <el-checkbox label="A">A</el-checkbox>
+          <el-checkbox label="B">B</el-checkbox>
+        </el-checkbox-group>
+
+        <!-- 下拉 -->
+        <h2>下拉框</h2>
+        <el-select v-model="select" placeholder="请选择">
+          <el-option label="苹果" value="apple" />
+          <el-option label="香蕉" value="banana" />
+        </el-select>
+
+        <!-- 日期 -->
+        <h2>日期选择</h2>
+        <el-date-picker v-model="date" type="date" />
+
+        <!-- Tabs -->
+        <h2>标签页</h2>
+        <el-tabs v-model="tab">
+          <el-tab-pane label="用户" name="1">用户内容</el-tab-pane>
+          <el-tab-pane label="设置" name="2">设置内容</el-tab-pane>
+        </el-tabs>
+
+        <!-- 表单 -->
+        <h2>表单</h2>
+        <el-form :model="form" label-width="80px">
+          <el-form-item label="用户名">
+            <el-input v-model="form.username" />
+          </el-form-item>
+          <el-form-item label="密码">
+            <el-input v-model="form.password" type="password" />
+          </el-form-item>
+          <el-button type="primary" @click="submitForm">提交</el-button>
+        </el-form>
+
+        <!-- 对话框 -->
+        <h2>对话框</h2>
+        <el-button @click="dialog = true">打开</el-button>
+
+        <el-dialog v-model="dialog" title="提示">
+          这是一个弹窗
+          <template #footer>
+            <el-button @click="dialog = false">取消</el-button>
+            <el-button type="primary" @click="dialog = false">确定</el-button>
+          </template>
+        </el-dialog>
+
+        <!-- 表格（加多列：姓名、年龄、性别、电话、地址、状态、日期） -->
+        <h2>表格（多列示例）</h2>
+        <el-table :data="tableData" style="width: 100%">
+          <el-table-column prop="name" label="姓名" />
+          <el-table-column prop="age" label="年龄" />
+          <el-table-column prop="gender" label="性别" />
+          <el-table-column prop="phone" label="联系电话" />
+          <el-table-column prop="address" label="地址" />
+          <el-table-column prop="status" label="状态">
+            <template #default="scope">
+              <el-tag type="success" v-if="scope.row.status === '正常'">正常</el-tag>
+              <el-tag type="warning" v-else>禁用</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="date" label="创建日期" />
+        </el-table>
+
+        <!-- 分页 -->
+        <h2>分页</h2>
+        <el-pagination
+          v-model:current-page="page"
+          :page-size="5"
+          :total="20"
+        />
+      </div>
+    </div>
 
   </div>
 </template>
@@ -2634,6 +2726,11 @@ app.mount('#app')
 import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Edit, Delete } from '@element-plus/icons-vue'
+
+// 导航菜单点击
+const handleSelect = (index) => {
+  console.log('菜单索引：', index)
+}
 
 // 按钮
 const handleClick = () => alert('点了按钮')
@@ -2674,10 +2771,12 @@ const submitForm = () => {
 // 对话框
 const dialog = ref(false)
 
-// 表格
+// 表格（多列数据）
 const tableData = ref([
-  { name: '小明', age: 18 },
-  { name: '小红', age: 20 }
+  { name: '小明', age: 18, gender: '男', phone: '13800138000', address: '北京市朝阳区', status: '正常', date: '2025-01-01' },
+  { name: '小红', age: 20, gender: '女', phone: '13900139000', address: '上海市浦东新区', status: '正常', date: '2025-01-02' },
+  { name: '小刚', age: 22, gender: '男', phone: '13700137000', address: '广州市天河区', status: '禁用', date: '2025-01-03' },
+  { name: '小丽', age: 19, gender: '女', phone: '13600136000', address: '深圳市南山区', status: '正常', date: '2025-01-04' },
 ])
 
 // 分页
