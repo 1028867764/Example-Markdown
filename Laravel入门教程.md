@@ -439,23 +439,36 @@ php artisan make:controller PostController
 
 ```bash
 php artisan make:model Post
+# 这里的 Post 是模型名称
 ```
-
 
 
 #### 1.3.2.3 创建模型 + 迁移 + 控制器（超常用）
 
 ```bash
 php artisan make:model Post -mcr
+# 或 php artisan make:model Post -mcr
+# 针对 JWT/API 开发：php artisan make:model Post -ma
 ```
 
-👉 等价于：
+👉 `-mcr` 等价于：
 
-* `-m` → migration（数据库表）
-* `-c` → controller
-* `-r` → resource controller
+* `-m` → migration（生成数据库迁移文件）
+* `-c` → controller（生成控制器文件）
+* `-r` → resource controller 
 
+👉 `-mc` 等价于：
 
+* `-m` → migration（生成数据库迁移文件）
+* `-c` → controller（生成**空的**控制器文件）
+
+👉更推荐的组合（针对 JWT/API 开发）：
+```bash
+php artisan make:model Post -ma
+```
+👉 **`-ma` 等价于：**
+* **`-m`**：Migration（迁移文件）。
+* **`-a`**：**Controller (API)**。它会生成一个“API 资源控制器”，只包含 `index`, `store`, `show`, `update`, `destroy` 这 5 个方法，**去掉了** API 不需要处理的页面跳转方法。
 
 #### 1.3.2.4 生成结果：
 
@@ -468,12 +481,14 @@ app/Http/Controllers/PostController.php
 
 
 #### 1.3.2.5 启动服务器
-
+默认端口是 8000
 ```bash
 php artisan serve
 ```
-
-
+可以自定义端口
+```bash
+php artisan serve --port=7890
+```
 
 #### 1.3.2.6 数据库迁移
 
@@ -1900,12 +1915,20 @@ Password: 123456
 
 ```bash
 php artisan serve
+# 或自定义端口 
+# php artisan serve --port=7890
 ```
 
-访问：
+访问默认端口：
 
 ```text
 http://127.0.0.1:8000/admin
+```
+
+或访问自定义端口：
+
+```text
+http://127.0.0.1:7890/admin
 ```
 
 👉 登录成功 = 后台就搭好了 🎉
@@ -1974,7 +1997,7 @@ ProductResource.php
 
 
 
-#### 表单示例（带详细注释）
+#### 4.2.2.1 表单示例（带详细注释）
 
 ```php
 use Filament\Forms;
@@ -2011,7 +2034,7 @@ public static function form(Form $form): Form
 
 
 
-#### 常用组件大全（新手必会）
+#### 4.2.2.2 常用组件大全（新手必会）
 
 ```php
 // 输入框
@@ -2079,7 +2102,7 @@ public static function table(Table $table): Table
 
 
 
-#### 🔍 搜索 & 筛选示例
+### 4.2.4 搜索 & 筛选示例
 
 ```php
 Tables\Filters\Filter::make('expensive')
@@ -2166,7 +2189,7 @@ protected function getData(): array
 
 
 
-#### 添加按钮
+#### 4.3.3.1 添加按钮
 
 ```php
 use Filament\Tables\Actions\Action;
@@ -2181,7 +2204,7 @@ Action::make('download')
 
 
 
-#### 带确认弹窗
+#### 4.3.3.2 带确认弹窗
 
 ```php
 Action::make('delete')
@@ -2191,7 +2214,7 @@ Action::make('delete')
 
 
 
-#### 通知提示
+#### 4.3.3.3 通知提示
 
 ```php
 use Filament\Notifications\Notification;
@@ -2208,7 +2231,7 @@ Notification::make()
 
 
 
-### 一步到位流程：
+### 4.4.1 一步到位流程：
 
 ```bash
 php artisan make:model Post -m
@@ -3511,7 +3534,7 @@ public function register()
         // 只有 API 请求（来自 Flutter/Postman 等）才返回自定义 JSON
         if ($request->is('api/*')) {
             return response()->json([
-                'code'    => 666,
+                'code'    => 114514,
                 'message' => '登录状态已过期，请重新登录',
                 'data'    => null,
             ], 401);
@@ -3556,7 +3579,7 @@ $this->renderable(function (AuthenticationException $e, Request $request) { ... 
 
 **4. 总结：它在 JWT 架构中的角色**
 在 **Flutter + JWT** 的开发中，`renderable` 充当了“翻译官”的角色：
-> 它把后端冷冰冰的 **PHP 异常**，翻译成了前端 Flutter 能听懂的 **JSON 暗号**（如你自定义的 `code: 666`）。
+> 它把后端冷冰冰的 **PHP 异常**，翻译成了前端 Flutter 能听懂的 **JSON 暗号**（如你自定义的 `code: 114514`）。
 
 ---
 
@@ -3650,6 +3673,7 @@ CRUD = 四个基本操作：
 
 ### 6.2.1 创建项目
 
+#### 6.2.1.1 默认端口
 ```bash
 composer create-project laravel/laravel my_project
 cd my_project
@@ -3662,6 +3686,18 @@ php artisan serve
 http://127.0.0.1:8000
 ```
 
+#### 6.2.1.2 自定义端口
+```bash
+composer create-project laravel/laravel my_project
+cd my_project
+php artisan serve --port=7890
+```
+
+访问：
+
+```
+http://127.0.0.1:7890
+```
 
 ### 6.2.2 配置数据库
 
@@ -4307,3 +4343,90 @@ composer require fruitcake/laravel-cors
 ```
 8000 已开放
 ```
+
+# 7. Dcat Admin
+明白了！既然你要**快点入门 Dcat Admin**，而且前端是 **Flutter**，那我们的策略很明确：
+
+1.  **后端管理 (Web)**：用 Dcat Admin 快速搭建，用于你（管理员）在电脑上审数据、配置 App 内容。
+2.  **前端接口 (App)**：用 Laravel 写 API（JWT 认证），供 Flutter 调用。
+
+以下是 Dcat Admin 的**光速入门指南**：
+
+## 7.1 第一步：安装 Dcat Admin
+
+假设你已经有一个安装好的 Laravel 项目：
+
+```bash
+# 1. 引入 composer 包
+composer require dcat/laravel-admin
+
+# 2. 发布资源并运行安装 (它会自动建立管理员表和权限表)
+php artisan admin:publish
+php artisan admin:install
+```
+
+👉 安装完成后，启动服务器 `php artisan serve`，然后访问：`http://localhost:8000/admin`
+* **默认账号：** `admin`
+* **默认密码：** `admin`
+
+
+## 7.2 第二步：一键生成 CRUD (核心大招)
+
+你不需要手写代码！Dcat Admin 有一个 **“代码生成器”**。
+
+1.  登录后台，找到 **工具 -> 代码生成器**。
+2.  填写你的表名（比如 `posts`），勾选“创建迁移文件”、“创建模型”、“创建控制器”、“创建翻译文件”。
+3.  点击 **提交**。
+4.  **运行迁移**（如果没点自动运行的话）：`php artisan migrate`。
+5.  **添加菜单**：在后台 **系统 -> 菜单** 里，把新生成的路由路径（比如 `posts`）加进去。
+
+**现在，你的 Post 管理后台（增删改查）就已经全部跑通了！**
+
+
+## 7.3 第三步：理解 Dcat 的核心代码结构
+
+生成的控制器在 `app/Admin/Controllers/PostController.php`。你会看到三个核心方法：
+
+* **`grid()`**：控制**列表页**显示哪些列、哪些搜索框。
+* **`form()`**：控制**新增/编辑页**有哪些表单项（文本、图片、日期等）。
+* **`detail()`**：控制**详情页**显示。
+
+**常用组件示例：**
+```php
+protected function form()
+{
+    return Form::make(new Post(), function (Form $form) {
+        $form->display('id');
+        $form->text('title', '标题')->required(); // 文本框
+        $form->image('cover', '封面图')->uniqueName(); // 图片上传
+        $form->editor('content', '正文'); // 富文本编辑器
+        $form->switch('is_public', '是否公开'); // 开关
+    });
+}
+```
+
+
+## 7.4 第四步：同步给 Flutter 提供接口
+
+这就是你现在的双轨并行：
+
+1.  **管理数据**：你通过 `app/Admin/Controllers/PostController.php` 录入新数据。
+2.  **展示数据**：你在 `app/Http/Controllers/Api/PostController.php`（之前用 `-ma` 生成的）里写逻辑，把数据传给 Flutter。
+
+**代码逻辑共享：**
+因为它们都共用同一个模型 `app/Models/Post.php`。你在后台改了数据，Flutter 那边调 API 看到的就是最新的。
+
+
+
+## 7.5 Flutter 开发者的特别提醒
+
+1.  **文件上传路径**：
+    Dcat Admin 默认把图片上传到 `storage/app/public/`。
+    * 记得运行 `php artisan storage:link`。
+    * 在给 Flutter 返回 JSON 数据时，图片路径记得加上 `url()` 函数，变成完整的 `http://.../xxx.jpg`，否则 Flutter 显示不出来。
+
+2.  **接口测试**：
+    既然你现在有后台了，你可以先在 Dcat Admin 里手动录入几条测试数据，然后再去调你的 API。这样你写 Flutter 的时候，就有真实的 JSON 数据可以解析了。
+
+**现在的进度：**
+你已经安装好 Dcat 并且能看到登录页面了吗？如果有报错（比如数据库连接），记得检查 `.env` 文件。
