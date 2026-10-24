@@ -219,7 +219,48 @@ class Sense(models.Model):
 
 ## 4. admin.py
 
+### 4.1 导入
+```python
+from django.contrib import admin  # 导入 admin 模块
+from .models import 模型1, 模型2, 模型3 # 导入当前 app 中的模型
+```
+
+### 4.2 注册模型
+```python
+@admin.register(模型1) # 将模型注册到后台管理站点
+class 模型1Admin(admin.ModelAdmin): # 继承 admin.ModelAdmin
+    list_display = ("字段1", "字段2", "字段3") # 显示
+    list_filter = ("字段4", "字段5") # 过滤
+    search_fields = ("字段6", "字段7") # 搜索
+
+@admin.register(模型2)
+class 模型2Admin(admin.ModelAdmin):
+    list_display = ("字段1", "字段2")
+    list_filter = ("字段3")
+    search_fields = ("字段4")
+```
+
 ## 5. views.py
+from .models import Quotation, Living, DeviceToken, Bulletin
+from .serializers import (
+    QuotationSerializer,
+    LivingSerializer,
+    BulletinSerializer,
+    LivingSearchSerializer,
+)
+from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.decorators import action, api_view
+from django_filters.rest_framework import DjangoFilterBackend
+
+
+@api_view(["GET"])
+APIView
+return Response()
+ModelViewSet
+
 ## 6. urls.py
 ## 7. serializers.py
 
