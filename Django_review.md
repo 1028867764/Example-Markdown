@@ -26,7 +26,7 @@
 > 只有继承它，Django 才会识别这是数据库模型，自动生成数据表、提供ORM、支持Admin。不继承，就只是普通Python类，和数据库无关。
 
 ```python
-from django.db import models
+from django.db import models  # 从 django.db 导入 models 模块
 
 
 class Sense(models.Model):
