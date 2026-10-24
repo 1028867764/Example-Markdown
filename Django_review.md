@@ -135,7 +135,7 @@ w2.synonym.all()  # 拿到 [w1] ✅ 直接同样写法！
 - verbose_name = "模型的单数显示名称"
 - verbose_name_plural = "模型的复数显示名称"
 - ordering = [-"A","B"] 👉 负号为逆序
-- unique_together = ["A","B"]
+- unique_together = ("A","B")
 
 ### 3.4 `def __str__(self):` 对象的脸
 是每个对象呈现的“脸”，以供print()或后台展示
