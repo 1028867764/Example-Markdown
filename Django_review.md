@@ -131,10 +131,10 @@ w2.synonym.all()  # 拿到 [w1] ✅ 直接同样写法！
 ```
 👉 不管是 w1 还是 w2，都用 `.synonym`，没有别的反向名字。
 
-### 3.3 `class Meta:` 模型的元配置块
+### 3.3 `class Meta:` 模型的元配置
 - verbose_name = "模型的单数显示名称"
 - verbose_name_plural = "模型的复数显示名称"
-- ordering = [-"A","B"] 👉 负号为逆序
+- ordering = ["-A","B"] 👉 负号为逆序
 - unique_together = ("A","B")
 
 ### 3.4 `def __str__(self):` 对象的脸
@@ -241,25 +241,573 @@ class 模型2Admin(admin.ModelAdmin):
 ```
 
 ## 5. views.py
-from .models import Quotation, Living, DeviceToken, Bulletin
-from .serializers import (
-    QuotationSerializer,
-    LivingSerializer,
-    BulletinSerializer,
-    LivingSearchSerializer,
+
+### 5.1 按需导入模型和序列化器
+```python
+from .models import 模型1, 模型2, 模型3 # 导入当前 app 中的模型
+from .serializers import ( # 导入当前 app 中的序列化器
+    模型1Serializer,
+    模型2Serializer,
+    模型3Serializer,
 )
+```
+
+### 5.2 APIView
+#### 5.2.1 初识 APIView
+```python
 from rest_framework.views import APIView
-from rest_framework.viewsets import ModelViewSet
+
+class 类视图(APIView):
+    def get(self, request):
+        pass
+
+    def post(self, request):
+        pass
+
+    def put(self, request):
+        pass
+
+    def patch(self, request):
+        pass
+
+    def delete(self, request):
+        pass
+```
+
+收到 GET 请求时执行 `get()`；收到 POST 请求时执行 `post()`；收到 PUT 请求时执行 `put()`；收到 PATCH 请求时执行 `patch()`；收到 DELETE 请求时执行 `delete()`。
+
+#### 5.2.2 APIView 的 `Request` 对象和属性
+- `request`：DRF 的 `APIView` 会把请求包装成 DRF 的 `Request` 对象，常用属性如下。
+
+| 属性                     | 作用          | 示例                         |
+| ---------------------- | ----------- | -------------------------- |
+| `request.method`       | 获取请求方法      | `GET`、`POST`               |
+| `request.data`         | 获取请求提交的数据   | `request.data.get('name')` |
+| `request.query_params` | 获取 URL 查询参数 | `?name=Tom`                |
+| `request.user`         | 当前认证用户      | `request.user`             |
+
+```python
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
+class RequestInfoView(APIView):
+
+    def get(self, request):
+        # 1. request.method：获取请求方法
+        # GET /api/request-info/?name=Tom
+        method = request.method  # "GET"
+
+        # 2. request.query_params：获取 URL 查询参数
+        # 例如 ?name=Tom&age=18
+
+        name = request.query_params.get("name", "未提供")
+        age = request.query_params.get("age", "未提供")
+
+        # 3. request.user：获取当前认证用户
+        # 未认证时通常是 AnonymousUser
+        user = str(request.user)
+
+        return Response({
+            "method": method,
+            "query_params": {
+                "name": name,
+                "age": age,
+            },
+            "user": user,
+        })
+
+    def post(self, request):
+        # 1. request.method：请求方法
+        method = request.method  # "POST"
+
+        # 2. request.data：请求体提交的数据
+        # 例如 JSON：{"name": "Tom", "age": 18}
+        name = request.data.get("name", "未提供")
+        age = request.data.get("age", "未提供")
+
+        # 3. request.user：当前认证用户
+        user = str(request.user)
+
+        return Response({
+            "method": method,
+            "data": {
+                "name": name,
+                "age": age,
+            },
+            "user": user,
+        })
+```
+Python 的 .get() 方法通常有两个参数：
+```python
+字典.get("键名", "默认值")
+
+# "键名"：要获取的字段名。
+# "默认值"：如果这个键不存在，就返回这个默认值
+# 如果没有写第二个参数（即"默认值"），且要获取的字段名不存在的话，则默认返回 None
+```
+
+#### 5.2.3 `Response` 对象
+```python
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.decorators import action, api_view
-from django_filters.rest_framework import DjangoFilterBackend
+
+class TestView(APIView):
+
+    def get(self, request):
+        return Response(
+            {'message': '获取成功'},
+            status=status.HTTP_200_OK,
+        )
+```
+`Response` 的第一个参数通常是返回的数据，`status` 参数设置真正的 HTTP 状态码。
+
+常见状态码：
+
+| 状态码常量                            | 数值  | 含义         |
+| -------------------------------- | --- | ---------- |
+| `HTTP_200_OK`                    | 200 | 请求成功       |
+| `HTTP_201_CREATED`               | 201 | 创建成功       |
+| `HTTP_204_NO_CONTENT`            | 204 | 操作成功，无响应内容 |
+| `HTTP_400_BAD_REQUEST`           | 400 | 请求数据无效     |
+| `HTTP_401_UNAUTHORIZED`          | 401 | 未通过身份认证    |
+| `HTTP_403_FORBIDDEN`             | 403 | 不允许访问      |
+| `HTTP_404_NOT_FOUND`             | 404 | 资源不存在      |
+| `HTTP_405_METHOD_NOT_ALLOWED`    | 405 | 不支持该请求方法   |
+| `HTTP_500_INTERNAL_SERVER_ERROR` | 500 | 服务器内部错误    |
+
+实际开发中，推荐使用 `status.HTTP_...` 常量，而不是到处直接写数字。
+
+### 5.3 ModelViewSet
+#### 5.3.1 初识 ModelViewSet
+```python
+from .models import 模型
+from .serializers import 模型Serializer
+from rest_framework import viewsets
+
+class 模型ViewSet(viewsets.ModelViewSet):
+    # 1. 指定数据源
+    queryset = 模型.objects.all()
+
+    # 2. 指定序列化器
+    serializer_class = 模型Serializer
+```
+结合当前 app 中的 `urls.py` 文件（后面会学到），可以自动生成一整套标准的 CRUD 路由，无须手写每一条 `path()`。
+
+#### 5.3.2 ModelViewSet 自动提供哪些功能？
+| HTTP 方法  | 默认 action        | 功能     |
+| -------- | ---------------- | ------ |
+| `GET`    | `list`           | 获取数据列表 |
+| `POST`   | `create`         | 创建数据   |
+| `GET`    | `retrieve`       | 获取单条数据 |
+| `PUT`    | `update`         | 整体更新   |
+| `PATCH`  | `partial_update` | 部分更新   |
+| `DELETE` | `destroy`        | 删除数据   |
+
+假设学生 API 的基础路径是 `/api/students/`：
+```python
+from .models import 
+from .serializers import StudentSerializer
+from rest_framework import viewsets
+
+class StudentViewSet(viewsets.ModelViewSet):
+    # 1. 指定数据源
+    queryset = Student.objects.all()
+
+    # 2. 指定序列化器
+    serializer_class = StudentSerializer
+```
+
+| 请求方法     | 请求地址               | 功能              |
+| -------- | ------------------ | --------------- |
+| `GET`    | `/api/students/`   | 查询全部学生          |
+| `POST`   | `/api/students/`   | 创建学生            |
+| `GET`    | `/api/students/1/` | 查询 ID 为 1 的学生   |
+| `PUT`    | `/api/students/1/` | 整体更新 ID 为 1 的学生 |
+| `PATCH`  | `/api/students/1/` | 部分更新 ID 为 1 的学生 |
+| `DELETE` | `/api/students/1/` | 删除 ID 为 1 的学生   |
+
+注意：这里的 `1` 是学生记录的主键，实际项目中会根据数据库数据变化。
+
+#### 5.3.3 重写 ModelViewSet 自带的 CRUD 逻辑
+- 基本模板
+```python
+from rest_framework import viewsets
+from rest_framework.response import Response
+from .models import Student
+from .serializers import StudentSerializer
+
+class StudentViewSet(viewsets.ModelViewSet):
+    # ===== 基础配置 =====
+    queryset = Student.objects.all()
+    serializer_class = StudentSerializer
+
+    # ===== 一、重写 CRUD 方法 =====
+
+    # GET：查询列表
+    def list(self, request, *args, **kwargs):
+        pass
+
+    # POST：创建数据
+    def create(self, request, *args, **kwargs):
+        pass
+
+    # GET：查询单条数据
+    def retrieve(self, request, *args, **kwargs):
+        pass
+
+    # PUT：整体更新
+    def update(self, request, *args, **kwargs):
+        pass
+
+    # PATCH：部分更新
+    def partial_update(self, request, *args, **kwargs):
+        pass
+
+    # DELETE：删除数据
+    def destroy(self, request, *args, **kwargs):
+        pass
+
+    # ===== 二、重写辅助方法 =====
+
+    # 动态选择序列化器
+    def get_serializer_class(self):
+        return super().get_serializer_class()
+
+    # 自定义创建逻辑
+    def perform_create(self, serializer):
+        serializer.save()
+```
+#### 5.3.4 重写辅助方法之 `get_serializer_class()`
+- 动态选择序列化器
+假设你有两个序列化器（后面会学到）：
+```python
+# serializers.py
+
+from rest_framework import serializers
+from .models import Student
 
 
-@api_view(["GET"])
-APIView
-return Response()
-ModelViewSet
+# 查询列表时使用：只返回姓名和年龄
+class StudentListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Student
+        fields = ["id", "name", "age"]
+
+
+# 创建或查询单条数据时使用：返回所有字段
+class StudentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Student
+        fields = "__all__"
+```
+在 `views.py` 中：
+```python
+from rest_framework import viewsets
+from .models import Student
+from .serializers import StudentSerializer, StudentListSerializer
+
+
+class StudentViewSet(viewsets.ModelViewSet):
+    queryset = Student.objects.all()
+    serializer_class = StudentSerializer
+
+    # 根据当前操作，动态选择序列化器
+    def get_serializer_class(self):
+        if self.action == "list":
+            return StudentListSerializer
+
+        return StudentSerializer
+```
+#### 5.3.5 重写辅助方法之 `perform_create()`
+- 自定义创建逻辑
+假设你的 `Student` 模型有一个 `created_by` 字段，用来记录是谁创建了这条学生记录。
+```python
+# models.py
+
+from django.db import models
+from django.conf import settings
+
+
+class Student(models.Model):
+    name = models.CharField(max_length=50)
+    age = models.IntegerField()
+    email = models.EmailField()
+
+    # 记录创建者
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+    )
+```
+在 `views.py` 中：
+```python
+from rest_framework import viewsets
+from .models import Student
+from .serializers import StudentSerializer
+
+
+class StudentViewSet(viewsets.ModelViewSet):
+    queryset = Student.objects.all()
+    serializer_class = StudentSerializer
+
+    # 自定义创建逻辑
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+```
+
+### 5.4 模型管理器 `Model.objects.`
+在 Django 中，`Model.objects.` 是一个非常重要的知识点。你可以把它理解为：通过 `objects` 管理器，对数据库中的模型数据进行查询、创建、修改和删除。
+#### 5.4.1 查询数据
+```python
+# 1. 查询全部学生，返回 QuerySet（查询集）
+students = Student.objects.all()
+
+# 2. 条件查询：查询年龄等于 18 的学生
+students = Student.objects.filter(age=18)
+
+# 3. 排除条件：查询年龄不等于 18 的学生
+students = Student.objects.exclude(age=18)
+
+# 4. 查询单条数据：必须且只能匹配一条记录，否则抛出异常
+student = Student.objects.get(pk=1)
+
+# 5. 获取第一条数据，没有数据则返回 None
+student = Student.objects.filter(age=18).first()
+
+# 6. 获取最后一条数据
+student = Student.objects.filter(age=18).last()
+```
+#### 5.4.2 条件查询：常见字段查找
+```python
+# 等于
+Student.objects.filter(age__exact=18)
+
+# 大于 / 大于等于
+Student.objects.filter(age__gt=18)
+Student.objects.filter(age__gte=18)
+
+# 小于 / 小于等于
+Student.objects.filter(age__lt=18)
+Student.objects.filter(age__lte=18)
+
+# 属于指定集合
+Student.objects.filter(age__in=[18, 20, 22])
+
+# 字符串包含（contains 区分大小写，具体取决于数据库）
+Student.objects.filter(name__contains="张")
+
+# 字符串包含（icontains 通常不区分大小写）
+Student.objects.filter(name__icontains="zhang")
+
+# 以指定内容开头 / 结尾
+Student.objects.filter(name__startswith="张")
+Student.objects.filter(name__endswith="三")
+
+# 字段是否为 NULL
+Student.objects.filter(email__isnull=True)
+```
+#### 5.4.3 排序、去重、限制结果
+```python
+# 按年龄升序排列
+Student.objects.order_by("age")
+
+# 按年龄降序排列
+Student.objects.order_by("-age")
+
+# 先按年龄升序，再按姓名升序
+Student.objects.order_by("age", "name")
+
+# 查询所有不同的年龄值
+Student.objects.values("age").distinct()
+
+# 只取前 5 条记录
+Student.objects.all()[:5]
+
+# 取第 2 至第 5 条记录（切片右侧不包含）
+Student.objects.all()[1:5]
+```
+#### 5.4.4 指定返回字段
+```python
+# values()：返回字典组成的 QuerySet
+Student.objects.values("id", "name", "age")
+
+# values_list()：返回元组组成的 QuerySet
+Student.objects.values_list("name", "age")
+
+# 只返回 name 字段组成的元组
+Student.objects.values_list("name", flat=True)
+```
+#### 5.4.5 创建数据
+```python
+# 方法一：create()，创建并保存，返回模型实例
+student = Student.objects.create(
+    name="张三",
+    age=18,
+    email="zhangsan@example.com",
+)
+
+# 方法二：实例化对象，再调用 save() 保存
+student = Student(
+    name="李四",
+    age=20,
+    email="lisi@example.com",
+)
+student.save()
+```
+#### 5.4.6 修改数据
+```python
+# 批量修改：将所有 18 岁学生的年龄改为 19
+Student.objects.filter(age=18).update(age=19)
+
+# 修改单个对象
+student = Student.objects.get(pk=1)
+student.age = 21
+student.save()
+
+# 只更新指定字段（适用于已修改的模型实例）
+student.age = 22
+student.save(update_fields=["age"])
+```
+#### 5.4.7 删除数据
+```python
+# 删除符合条件的学生
+Student.objects.filter(age__lt=18).delete()
+
+# 删除单条记录
+student = Student.objects.get(pk=1)
+student.delete()
+
+# 注意：以下操作会删除全部学生记录，请勿随意执行！
+# Student.objects.all().delete()
+```
+#### 5.4.8 统计与判断
+```python
+# 统计学生总数
+total = Student.objects.count()
+
+# 判断是否存在 18 岁的学生，返回 True 或 False
+exists = Student.objects.filter(age=18).exists()
+
+# 统计学生平均年龄
+average_age = Student.objects.aggregate(avg_age=Avg("age"))
+
+# 按年龄分组，统计每个年龄对应的学生数量
+age_counts = Student.objects.values("age").annotate(
+    total=Count("id")
+)
+```
+#### 5.4.9 获取或创建、获取或更新
+```python
+# 如果 email 对应的学生存在，就获取；否则创建
+student, created = Student.objects.get_or_create(
+    email="wangwu@example.com",
+    defaults={
+        "name": "王五",
+        "age": 18,
+    },
+)
+
+# created=True 表示新建；False 表示获取已有记录
+
+
+# 如果 email 对应的学生存在，就更新；否则创建
+student, created = Student.objects.update_or_create(
+    email="wangwu@example.com",
+    defaults={
+        "name": "王五",
+        "age": 20,
+    },
+)
+```
+#### 5.4.10 批量操作
+```python
+# 批量创建：一次提交多个模型对象
+Student.objects.bulk_create([
+    Student(name="学生甲", age=18, email="a@example.com"),
+    Student(name="学生乙", age=19, email="b@example.com"),
+])
+
+# 批量更新：先获取对象，再修改字段
+students = list(Student.objects.filter(age=18))
+
+for student in students:
+    student.age = 19
+
+# 将修改后的多个对象批量更新到数据库
+Student.objects.bulk_update(students, ["age"])
+```
+#### 5.4.11 常见使用原则
+```python
+# filter()：返回 QuerySet，适合查多条或零条数据
+students = Student.objects.filter(age__gte=18)
+
+# get()：返回单个模型实例，要求恰好匹配一条记录
+student = Student.objects.get(pk=1)
+
+# create()：创建并保存，返回模型实例
+student = Student.objects.create(
+    name="赵六",
+    age=20,
+    email="zhaoliu@example.com",
+)
+
+# update()：批量更新，返回受影响的记录数
+updated_count = Student.objects.filter(age=20).update(age=21)
+
+# delete()：删除符合条件的记录，返回删除统计信息
+# deleted_count, details = Student.objects.filter(age=100).delete()
+```
+#### 5.4.12 总结
+```python
+# 常用指令
+
+Model.objects.all()
+Model.objects.all()[number1:number2]
+Model.objects.filter()
+Model.objects.exclude()
+Model.objects.get()
+Model.objects.filter()
+Model.objects.filter().first()
+Model.objects.filter().last()
+Model.objects.order_by("字段名")
+Model.objects.order_by("-字段名")
+Model.objects.values("字段名").distinct()
+Model.objects.create()
+instance.save()
+Model.objects.update()
+instance.delete()
+Model.objects.count()
+Model.objects.exists()
+Model.objects.get_or_create()
+Model.objects.update_or_create()
+
+# 细说查询条件
+
+Model.objects.filter(字段名__exact=等于)
+Model.objects.filter(字段名__gt=大于)
+Model.objects.filter(字段名__gte=大于等于)
+Model.objects.filter(字段名__lt=小于)
+Model.objects.filter(字段名__lte=小于等于)
+Model.objects.filter(字段名__in=[属于,指定,集合])
+Model.objects.filter(字段名__contains="字符串包含，区别大小写")
+Model.objects.filter(字段名__icontains="字符串包含，通常不区分大小写")
+Model.objects.filter(字段名__startswith="以指定内容开头")
+Model.objects.filter(字段名__endswith="以指定内容结尾")
+Model.objects.filter(字段名__isnull=True) # 查询字段为 NULL 的
+```
+
+### 5.5 @api_view([])
+```python
+
+```
+### 5.6 @action()
+```python
+```
+### 5.7 DjangoFilterBackend
+```python
+```
+
 
 ## 6. urls.py
 ## 7. serializers.py
