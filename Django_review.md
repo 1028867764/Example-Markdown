@@ -1,6 +1,151 @@
 
-## 1. Django项目骨架一览
+## 1. 预备知识
 
+### 1.1 创建 Django 项目
+
+在创建项目之前，需要先安装 Django。
+
+**第一步：安装 Django**
+
+```bash
+# 安装 Django
+pip install django
+
+# 查看 Django 版本，确认安装成功
+python -m django --version
+```
+
+**第二步：创建 Django 项目**
+
+```bash
+# 创建名为 myproject 的 Django 项目
+django-admin startproject myproject
+```
+
+执行后，会生成以下目录结构：
+
+```text
+myproject/
+├── manage.py
+└── myproject/
+    ├── __init__.py
+    ├── settings.py
+    ├── urls.py
+    ├── asgi.py
+    └── wsgi.py
+```
+
+各文件的作用：
+
+- `manage.py`：执行 Django 项目管理命令。
+- `settings.py`：配置项目，例如数据库、应用、时区等。
+- `urls.py`：配置项目主路由。
+- `asgi.py`：ASGI 应用入口。
+- `wsgi.py`：WSGI 应用入口。
+- `__init__.py`：标记该目录为 Python 包。
+
+**第三步：进入项目目录**
+
+```bash
+# 进入包含 manage.py 的项目目录
+cd myproject
+```
+
+**第四步：启动开发服务器**
+
+```bash
+python manage.py runserver
+```
+
+默认情况下，开发服务器会运行在：
+
+`http://127.0.0.1:8000/`
+
+在浏览器打开这个地址，如果看到 Django 的欢迎页面，就说明项目创建成功。
+
+注意：`runserver` 主要用于本地开发和调试，不建议直接用于正式生产环境。
+
+### 1.2 Django 常用命令行
+
+创建项目后，就可以使用 `manage.py` 执行各种管理命令。
+
+```bash
+# 查看 Django 命令帮助
+python manage.py help
+
+# 启动开发服务器
+python manage.py runserver
+
+# 创建 Django 应用
+python manage.py startapp app_name
+
+# 根据模型变更生成迁移文件
+python manage.py makemigrations
+
+# 将迁移应用到数据库
+python manage.py migrate
+
+# 创建管理员账号
+python manage.py createsuperuser
+
+# 检查项目配置
+python manage.py check
+
+# 进入 Django Shell
+python manage.py shell
+```
+
+### 1.3 创建 Django 应用
+
+Django 项目创建完成后，通常还需要创建一个或多个 App ，用来组织不同的业务功能。
+
+```bash
+# 在包含 manage.py 的目录中执行
+python manage.py startapp books
+```
+
+执行后，会生成类似以下结构：
+
+```text
+books/
+├── __init__.py
+├── admin.py
+├── apps.py
+├── migrations/
+├── models.py
+├── tests.py
+└── views.py
+```
+
+各文件的作用：
+
+- `models.py`：定义数据库模型。
+- `views.py`：编写视图逻辑。
+- `admin.py`：配置 Django Admin 后台。
+- `apps.py`：配置应用信息。
+- `tests.py`：编写测试。
+- `migrations/`：保存数据库迁移文件。
+
+创建应用后，还需要在项目的 `settings.py` 中注册它：
+
+```python
+INSTALLED_APPS = [
+    # Django 内置应用
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+
+    # 自己创建的应用
+    "books",
+]
+```
+
+这样，Django 才会将 `books` 作为项目中的已安装应用进行管理。
+
+### 1.4 Django项目骨架一览
 ```
 项目根目录 project/
 ├── manage.py               ✅ 核心脚本！命令入口（migrate、runserver、createsuperuser都靠它）
@@ -18,6 +163,8 @@
 ```
 
 ## 2. settings.py
+（略，不懂的问 AI ）
+
 ## 3. models.py
 ### 3.1 `models.Model` 以及 常用的 `Field`
 
