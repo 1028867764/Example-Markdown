@@ -779,8 +779,8 @@ Model.objects.update()
 instance.delete()
 Model.objects.count()
 Model.objects.exists()
-Model.objects.get_or_create()
-Model.objects.update_or_create()
+instance, created = Model.objects.get_or_create()
+instance, created = Model.objects.update_or_create()
 
 # 细说查询条件
 
@@ -798,18 +798,417 @@ Model.objects.filter(字段名__isnull=True) # 查询字段为 NULL 的
 ```
 
 ### 5.5 @api_view([])
-```python
+#### 5.5.1 初识 @api_view([])
+`@api_view([])` 是 Django REST Framework（DRF）提供的函数视图装饰器，用于将普通 Django 函数视图转换为 DRF API 视图，并指定允许使用的 HTTP 请求方法。
 
+最重要的是：方括号 `[]` 中填写允许的请求方法。
+
+例如：
+
+```python
+@api_view(["GET"])
 ```
+
+表示这个接口只允许使用 `GET` 请求。
+
+#### 5.5.2 基础语法
+```python
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+
+@api_view(["GET"])
+def student_list(request):
+    # 处理 GET 请求
+    return Response({"message": "查询学生列表"})
+```
+
+逐行理解：
+
+- `api_view`：从 DRF 导入函数视图装饰器。
+- `@api_view(["GET"])`：规定接口只允许 GET 请求。
+- `request`：DRF 封装后的请求对象。
+- `Response()`：返回 API 响应数据，DRF 会根据内容协商等配置处理响应格式。
+
+注意：`@api_view([])` 如果真的传入空列表，表示没有允许的 HTTP 请求方法，并不是允许所有方法。正常情况下，请求会被拒绝。因此，通常需要填写 `"GET"`、`"POST"` 等方法。
+
+#### 5.5.3 常见 HTTP 方法
+
+| 写法                           | 用途     | 常见场景   |
+| ---------------------------- | ------ | ------ |
+| `@api_view(["GET"])`         | 查询数据   | 获取学生列表 |
+| `@api_view(["POST"])`        | 提交数据   | 创建学生   |
+| `@api_view(["PUT"])`         | 整体更新   | 替换学生信息 |
+| `@api_view(["PATCH"])`       | 部分更新   | 修改学生年龄 |
+| `@api_view(["DELETE"])`      | 删除数据   | 删除学生   |
+| `@api_view(["GET", "POST"])` | 允许多种方法 | 查询和创建  |
+
+HTTP 方法名一般使用大写字符串。
+
+#### 5.5.4 同一个接口允许 GET 和 POST
+
+如果希望同一个函数既能查询学生，又能创建学生，可以这样写：
+
+```python
+# views.py
+
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+
+from .models import Student
+from .serializers import StudentSerializer
+
+
+# 同时允许 GET 和 POST
+@api_view(["GET", "POST"])
+def student_list(request):
+
+    # GET：查询所有学生
+    if request.method == "GET":
+        students = Student.objects.all()
+        serializer = StudentSerializer(students, many=True)
+
+        return Response(serializer.data)
+
+    # POST：创建学生
+    elif request.method == "POST":
+        serializer = StudentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(
+            serializer.data,
+            status=status.HTTP_201_CREATED,
+        )
+```
+这里的：
+```python
+request.method
+```
+用于判断当前请求的方法。
+
+虽然 `@api_view(["GET", "POST"])` 已经限制了请求方法，但在函数内部仍然可以使用 `request.method` 区分不同业务逻辑。
+
+这里还有一个重要知识点：
+
+```python
+serializer = StudentSerializer(students, many=True)
+```
+
+因为 `students` 包含多条学生记录，所以要写 `many=True`。如果序列化的是单个学生对象，则通常不需要它。
+
+#### 5.5.5 与 `APIView`、`ModelViewSet` 的区别
+
+| 特点        | `@api_view`      | `APIView`            | `ModelViewSet`  |
+| --------- | ---------------- | -------------------- | --------------- |
+| 视图形式      | 函数               | 类                    | 类               |
+| HTTP 方法处理 | `request.method` | `get()`、`post()` 等方法 | 内置 CRUD actions |
+| 代码灵活性     | 适合简单接口           | 适合自定义复杂逻辑            | 适合标准 CRUD       |
+| 默认 CRUD   | 不提供              | 不提供                  | 提供              |
+
+你可以这样记忆：
+
+- `@api_view`：函数写接口。
+- `APIView`：类写接口。
+- `ModelViewSet`：快速构建标准增删改查接口。
+
 ### 5.6 @action()
+#### 5.6.1 初识 @action()
+
+`@action()` 是 Django REST Framework（DRF）中用于 给 `ViewSet` 或 `ModelViewSet` 添加自定义 API 接口的装饰器。
+
+你已经学过 `ModelViewSet` 的标准 CRUD 方法，例如 `list()`、`create()`、`retrieve()`。如果现在想增加一个不属于标准 CRUD 的功能，例如：
+
+- 查询某个学生的成绩
+- 给学生重置密码
+- 批量审核学生
+- 查询学生的个人资料
+
+就可以使用 `@action()`。
+
+一句话记忆：**标准 CRUD 用内置方法，额外业务功能用 `@action()`。**
+
+#### 5.6.2 基础语法
 ```python
+from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
+from .models import Student
+from .serializers import StudentSerializer
+
+
+class StudentViewSet(viewsets.ModelViewSet):
+
+    # 标准 CRUD 的基础配置
+    queryset = Student.objects.all()
+    serializer_class = StudentSerializer
+
+    # ==========================================
+    # 自定义接口：查询所有成年学生
+    # ==========================================
+
+    @action(
+        detail=False,                 # False：查询集合，不需要指定学生 ID
+        methods=["get"],              # 只允许 GET 请求
+        url_path="adult-students",    # 自定义 URL 路径
+    )
+    def get_adults(self, request):
+        # 第一步：查询年龄大于或等于 18 岁的学生
+        students = Student.objects.filter(age__gte=18)
+
+        # 第二步：将多条学生记录转换为序列化数据
+        serializer = self.get_serializer(students, many=True)
+
+        # 第三步：返回 API 响应
+        return Response(serializer.data)
 ```
+假设原来 `StudentViewSet` 的基础路由是 `/api/students/`，只需要在这个基础路由后加上自定义的 `url_path`，即 `/api/students/adult-students/`，请求就会访问该 `@action()` ，并执行 `get_adults()` 方法。
+
 ### 5.7 DjangoFilterBackend
+
+#### 5.7.1 初识 DjangoFilterBackend
+
+`DjangoFilterBackend` 是 Django REST Framework（DRF）中常用的过滤后端，可以让用户通过 URL 查询参数筛选数据，而不需要自己手动编写大量的判断逻辑。
+
+例如，你有一个学生列表接口：
+
 ```python
+GET /api/students/
 ```
 
+希望查询年龄大于等于 18 岁的学生，可以通过 URL 传递参数：
+
+```python
+GET /api/students/?age__gte=18
+```
+
+希望查询指定性别的学生：
+
+```python
+GET /api/students/?gender=男
+```
+
+这就是 `DjangoFilterBackend` 的主要用途：把 URL 中的查询参数转换成 Django ORM 的过滤条件。
+
+#### 5.7.2 安装与配置
+
+#### 5.7.2.1 安装依赖
+在 VS Code 的终端中执行：
+
+```bash
+pip install django-filter
+```
+
+`django-filter` 是一个独立的第三方库，需要单独安装。
+#### 5.7.2.2 注册应用
+打开项目的 `settings.py`，在 `INSTALLED_APPS` 中添加：
+
+```python
+INSTALLED_APPS = [
+    # Django 自带应用
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+
+    # Django REST Framework
+    "rest_framework",
+
+    # Django 过滤库
+    "django_filters",
+
+    # 自己的应用
+    "students",
+]
+```
+
+注意：Python 包的安装名称是 `django-filter`，在 `INSTALLED_APPS` 中的注册名称是 `django_filters`。
+#### 5.7.2.3 配置 DRF 的过滤后端
+有两种配置方式。
+
+- 方式一：全局配置
+
+在 `settings.py` 中添加：
+
+```python
+REST_FRAMEWORK = {
+    # 全局启用 DjangoFilterBackend
+    "DEFAULT_FILTER_BACKENDS": [
+        "django_filters.rest_framework.DjangoFilterBackend",
+    ],
+}
+```
+
+这样，所有使用 DRF 的视图默认都会启用这个过滤后端。
+
+- 方式二：单个视图配置
+
+```python
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import viewsets
+
+class StudentViewSet(viewsets.ModelViewSet):
+    queryset = Student.objects.all()
+    serializer_class = StudentSerializer
+
+    # 只为当前视图启用过滤
+    filter_backends = [DjangoFilterBackend]
+```
+
+如果你只想让部分接口支持过滤，建议先学习第二种方式，更容易理解过滤功能的作用范围。
+#### 5.7.3 最基础的用法：`filterset_fields`
+
+这是最适合初学者掌握的方式，可以快速指定哪些字段允许通过 URL 筛选。
+
+#### 5.7.3.1 示例模型 `models.py`
+假设你的学生模型如下：
+
+```python
+from django.db import models
+
+class Student(models.Model):
+    name = models.CharField(max_length=50)
+    age = models.IntegerField()
+    gender = models.CharField(max_length=10)
+    city = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.name
+```
+
+假设数据库中有以下学生：
+
+| id | name | age | gender | city |
+| -- | ---- | --- | ------ | ---- |
+| 1  | 张三   | 18  | 男      | 北京   |
+| 2  | 李四   | 20  | 男      | 上海   |
+| 3  | 王五   | 19  | 男      | 广州   |
+| 4  | 赵六   | 22  | 女      | 上海   |
+| 5  | 七妹   | 16  | 女      | 香港   |
+#### 5.7.3.2 编写视图 `views.py`
+```python
+from rest_framework import viewsets
+from django_filters.rest_framework import DjangoFilterBackend
+
+from .models import Student
+from .serializers import StudentSerializer
+
+
+class StudentViewSet(viewsets.ModelViewSet):
+    # 设置基础查询集
+    queryset = Student.objects.all()
+
+    # 指定序列化器
+    serializer_class = StudentSerializer
+
+    # 启用 DjangoFilterBackend
+    filter_backends = [DjangoFilterBackend]
+
+    # 指定允许过滤的字段
+    filterset_fields = ["name", "age", "gender", "city"]
+```
+
+重点理解这两行：
+
+```python
+filter_backends = [DjangoFilterBackend]
+filterset_fields = ["name", "age", "gender", "city"]
+```
+
+- `filter_backends`：指定使用什么过滤后端。
+- `filterset_fields`：指定允许用户通过查询参数筛选哪些模型字段。
+#### 5.7.3.3 实际请求示例
+假设路由已经注册为 `/api/students/`。
+
+示例 1：按性别过滤
+
+`GET /api/students/?gender=男`
+
+返回张三、李四、王五。因为三人的 gender 都是“男”。
+
+示例 2：按城市过滤
+
+`GET /api/students/?city=上海`
+
+返回李四、赵六。
+
+示例 3：组合过滤
+
+`GET /api/students/?gender=女&city=香港`
+
+返回同时满足两个条件的学生，即七妹。
+
+注意：多个查询参数默认是 AND（并且）关系。 也就是说，数据必须同时满足所有过滤条件。
+#### 5.7.4 进阶用法：支持大于、小于等条件
+
+`filterset_fields` 的简单列表写法主要提供字段的精确匹配。如果需要年龄大于等于某个值，或者小于某个值，就可以使用字典写法指定过滤查找类型。
+
+```python
+class StudentViewSet(viewsets.ModelViewSet):
+    queryset = Student.objects.all()
+    serializer_class = StudentSerializer
+
+    filter_backends = [DjangoFilterBackend]
+
+    # 为每个字段指定允许使用的过滤方式
+    filterset_fields = {
+        "name": ["exact", "icontains"],
+        "age": ["exact", "gt", "gte", "lt", "lte"],
+        "gender": ["exact"],
+        "city": ["exact", "icontains"],
+    }
+```
+
+常见的查找类型：
+
+| 查找类型        | 含义            | URL 示例               |
+| ----------- | ------------- | -------------------- |
+| `exact`     | 精确匹配          | `?age=18`            |
+| `gt`        | 大于            | `?age__gt=18`        |
+| `gte`       | 大于等于          | `?age__gte=18`       |
+| `lt`        | 小于            | `?age__lt=18`        |
+| `lte`       | 小于等于          | `?age__lte=18`       |
+| `icontains` | 包含指定文本，不区分大小写 | `?name__icontains=张` |
+
+这里的 `__` 是 Django ORM 的双下划线查找语法。
+
+例如：
+
+```python
+GET /api/students/?age__gte=18
+```
+
+相当于：
+
+```python
+Student.objects.filter(age__gte=18)
+```
+
+会筛选出年龄大于或等于 18 岁的学生。
+
+再比如：
+
+```python
+GET /api/students/?name__icontains=张
+```
+
+相当于：
+
+```python
+Student.objects.filter(name__icontains="张")
+```
+
+会筛选名字中包含“张”的学生。
+
+注意： 这里的 `filterset_fields` 字典是在声明允许使用的过滤方法，不是让你直接填写过滤值。具体值由请求 URL 传入。
 
 ## 6. urls.py
+
+
 ## 7. serializers.py
 
 ## 8. permissions.py
