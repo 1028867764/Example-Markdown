@@ -95,7 +95,15 @@ class Sense(models.Model):
     class Meta:
         ordering = ["sort"]
 ```
+**切记：每一次创建或修改模型后，都需要执行数据库迁移**
 
+```bash
+# 根据模型变更生成迁移文件
+python manage.py makemigrations
+
+# 将迁移应用到数据库
+python manage.py migrate
+```
 
 ### 3.2 字段参数中的 `verbose_name` 和 `related_name`
 - verbose_name = "字段的单数显示名称"
@@ -137,11 +145,12 @@ w2.synonym.all()  # 拿到 [w1] ✅ 直接同样写法！
 - ordering = ["-A","B"] 👉 负号为逆序
 - unique_together = ("A","B")
 
-### 3.4 `def __str__(self):` 对象的脸
-是每个对象呈现的“脸”，以供print()或后台展示
+### 3.4 `def __str__(self):` 模型实例的“脸”
+可以把它记成：模型里每个单独实例的“脸”，方便在 print()、Django Admin 后台等地方识别这个实例
 ```python
 # 通常：
-return self.字段
+def __str__(self):
+    return self.某个字段
 ```
 
 Dart：在类方法里直接写成员名，默认自动从当前对象 `this` 查找，`this.` 可以省略。
@@ -1392,5 +1401,178 @@ path("路由地址", views.视图类.as_view(), name="路由名称"),
 ```
 
 ## 7. serializers.py
+
+### 7.1 什么是 Serializer（序列化器）？
+
+在 Django REST Framework（DRF）中，序列化器可以将 Django 模型对象或查询集转换为适合 API 输出的数据。"序列化" ≈ "json化"。
+
+例如，数据库中有一本图书：
+
+```python
+# 数据库中的 Book 模型对象
+book.title = "Python 入门"
+book.price = 299
+```
+
+经过序列化器处理后，可以输出类似以下 JSON 数据：
+
+```json
+{
+    "title": "Python 入门",
+    "price": "299.00"
+}
+```
+
+注意：`DecimalField` 默认通常以字符串形式输出十进制数值。
+
+**记忆小窍门：**
+
+```text
+数据库中的模型对象
+        |
+        v
+ModelSerializer 将模型数据转换为基本数据类型
+        |
+        v
+DRF 将数据渲染为 JSON 格式
+        |
+        v
+返回客户端
+```
+
+严格来说，`ModelSerializer` 负责将模型数据转换为基本数据类型，之后由 DRF 的 Renderer 将数据渲染为 JSON 等格式。
+
+### 7.2 准备 Django 模型
+
+在学习序列化器前，先准备一个图书模型。
+
+文件：`models.py`
+
+```python
+from django.db import models
+
+
+class Book(models.Model):
+    # 图书名称，最多 100 个字符
+    title = models.CharField(max_length=100)
+
+    # 图书价格：最多 8 位数字，其中 2 位小数
+    price = models.DecimalField(max_digits=8, decimal_places=2)
+
+    # 图书库存：非负整数，默认值为 0
+    stock = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        # 在 Django Admin 后台等位置显示图书名称
+        return self.title
+```
+
+创建模型后，需要执行数据库迁移：
+
+```bash
+# 根据模型变更生成迁移文件
+python manage.py makemigrations
+
+# 将迁移应用到数据库
+python manage.py migrate
+```
+
+### 7.3 ModelSerializer（模型序列化器）
+
+`ModelSerializer` 是 DRF 提供的序列化器类，可以根据 Django 模型自动生成字段，减少重复代码。
+
+文件：`serializers.py`
+
+```python
+from rest_framework import serializers
+from .models import Book
+
+
+class BookSerializer(serializers.ModelSerializer):
+
+    # 序列化器的元配置
+    class Meta:
+        # 指定当前序列化器对应的 Django 模型
+        model = Book
+
+        # 输出全部字段（虽简洁，但不推荐）
+        # fields = "__all__"
+
+        # 明确指定需要输出的字段
+        fields = ["id", "title", "price", "stock"]
+
+        # 将 id 设置为只读字段
+        read_only_fields = ["id"]
+```
+
+实际开发中，建议明确列出 `fields`，这样可以控制 API 输出内容，避免模型新增字段后意外暴露不需要的数据。
+
+### 7.4 序列化单个模型对象
+
+```python
+# 查询一本图书
+book = Book.objects.get(id=1)
+
+# 将模型对象转换为序列化后的数据
+serializer = BookSerializer(book)
+
+# 获取序列化后的数据
+print(serializer.data)
+```
+
+输出内容类似：
+
+```json
+{
+    "id": 1,
+    "title": "Python 入门",
+    "price": "299.00",
+    "stock": 10
+}
+```
+
+### 7.5 序列化多个模型对象
+
+如果需要输出多本图书，使用 `many=True`。
+
+```python
+# 查询所有图书
+books = Book.objects.all()
+
+# many=True 表示传入的是多个模型对象
+serializer = BookSerializer(books, many=True)
+
+# 获取所有图书的序列化数据
+print(serializer.data)
+```
+
+此时，`serializer.data` 返回的是包含多本图书数据的列表。
+
+### 7.6 在 views.py 中使用序列化器
+
+实际项目中，可以在视图中查询数据，再交给序列化器处理，最后返回 API 响应。
+
+示例：
+
+```python
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from .models import Book
+from .serializers import BookSerializer
+
+
+@api_view(["GET"])
+def book_list(request):
+    # 从数据库查询所有图书
+    books = Book.objects.all()
+
+    # 将查询集转换为序列化数据
+    serializer = BookSerializer(books, many=True)
+
+    # 返回 API 响应，DRF 会将数据渲染为 JSON 等格式
+    return Response(serializer.data)
+```
+
+这个视图只负责查询和输出数据，不涉及反序列化。
 
 ## 8. permissions.py
