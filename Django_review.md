@@ -241,6 +241,10 @@ class 模型2Admin(admin.ModelAdmin):
 ```
 
 ## 5. views.py
+视图常见的编写方式有两种：
+
+- **FBV**（Function-Based View）：基于函数的视图。
+- **CBV**（Class-Based View）：基于类的视图。
 
 ### 5.1 按需导入模型和序列化器
 ```python
@@ -799,7 +803,7 @@ Model.objects.filter(字段名__isnull=True) # 查询字段为 NULL 的
 
 ### 5.5 @api_view([])
 #### 5.5.1 初识 @api_view([])
-`@api_view([])` 是 Django REST Framework（DRF）提供的函数视图装饰器，用于将普通 Django 函数视图转换为 DRF API 视图，并指定允许使用的 HTTP 请求方法。
+`@api_view([])` 是 Django REST Framework（DRF）提供的 FBV 装饰器，用于将普通 Django 函数视图转换为 DRF API 视图，并指定允许使用的 HTTP 请求方法。
 
 最重要的是：方括号 `[]` 中填写允许的请求方法。
 
@@ -902,7 +906,7 @@ serializer = StudentSerializer(students, many=True)
 
 | 特点        | `@api_view`      | `APIView`            | `ModelViewSet`  |
 | --------- | ---------------- | -------------------- | --------------- |
-| 视图形式      | 函数               | 类                    | 类               |
+| 视图形式      | FBV               | CBV                    | CBV               |
 | HTTP 方法处理 | `request.method` | `get()`、`post()` 等方法 | 内置 CRUD actions |
 | 代码灵活性     | 适合简单接口           | 适合自定义复杂逻辑            | 适合标准 CRUD       |
 | 默认 CRUD   | 不提供              | 不提供                  | 提供              |
@@ -916,7 +920,7 @@ serializer = StudentSerializer(students, many=True)
 ### 5.6 @action()
 #### 5.6.1 初识 @action()
 
-`@action()` 是 Django REST Framework（DRF）中用于 给 `ViewSet` 或 `ModelViewSet` 添加自定义 API 接口的装饰器。
+`@action()` 是 Django REST Framework（DRF）中用于 给 `ViewSet` 或 `ModelViewSet` **添加**自定义 API 接口的装饰器。
 
 你已经学过 `ModelViewSet` 的标准 CRUD 方法，例如 `list()`、`create()`、`retrieve()`。如果现在想增加一个不属于标准 CRUD 的功能，例如：
 
@@ -1207,7 +1211,185 @@ Student.objects.filter(name__icontains="张")
 注意： 这里的 `filterset_fields` 字典是在声明允许使用的过滤方法，不是让你直接填写过滤值。具体值由请求 URL 传入。
 
 ## 6. urls.py
+### 6.1 `urls.py` 是什么？
 
+`urls.py` 是 Django 项目中用于配置 URL 路由的文件，主要负责将用户请求的 URL 分配给对应的视图函数或视图类。
+
+你可以把 Django 网站理解成一家医院：
+
+- `urls.py`：挂号处，根据需求安排去哪个科室。
+- `views.py`：医生，负责处理具体业务。
+- `models.py`：数据库模型，负责定义数据结构。
+- `serializers.py`：DRF 序列化器，负责数据转换与校验。
+
+例如，用户访问：
+
+```python
+http://127.0.0.1:8000/api/students/
+```
+
+Django 会根据 URL 路由配置，找到对应的视图，执行查询学生数据、序列化数据等操作，最后返回响应。
+
+### 6.2 项目主路由与 app 路由
+Django 项目通常将路由分为**项目主路由**和 **App 路由**。
+
+- **项目主路由**：负责引入各个 App 的路由，并设置统一的 URL 前缀。
+- **App 路由**：负责配置当前 App 的具体接口，包括普通视图、类视图和 DRF 的 ViewSet 接口。
+### 6.3 项目主路由
+
+一个典型的 Django 项目主路由文件如下：
+
+```python
+# 项目主路由：项目/config/urls.py
+
+from django.contrib import admin
+from django.urls import path, include # 导入路由配置函数
+
+urlpatterns = [ # Django 默认识别的路由列表
+    # Django 后台管理
+    path("admin/", admin.site.urls), # 将 /admin/ 分配给后台管理系统
+
+    # 学生列表页面
+    path("api/", include("students.urls")), # 把 students 应用的 urls.py 中的路由挂载到 /api/ 前缀下
+]
+```
+
+### 6.4 App 路由
+
+#### 6.4.1 基本结构
+
+一个典型的 App 路由文件如下：
+
+```python
+# 项目/App/urls.py
+
+# 1. 导入 path，用于定义 URL 路由规则
+from django.urls import path
+
+# 2. 导入当前 App 的 views.py
+from . import views
+
+
+# 3. urlpatterns 路由列表
+urlpatterns = [
+    # 1. 普通 FBV：直接传入函数
+    # --------------------------------------------------------
+    # 当用户访问 /api/students/，Django 会调用 views.student_list
+    path("students", views.student_list, name="student-list"),
+
+
+    # 2. 动态参数：从 URL 中获取整数 id
+    # --------------------------------------------------------
+    # <int:id> 表示从 URL 中获取一个整数，并传递给视图
+    # 例如访问 /api/students/1/，id 的值就是 1
+    path("students/<int:id>/", views.student_detail, name="student-detail"),
+
+    # 3. CBV：使用 .as_view() 转换为可调用的视图
+    # --------------------------------------------------------
+    # 假设 views.py 中定义了 LoginView 类
+    path("login/", views.LoginView.as_view(), name="login"),
+
+]
+```
+
+**补充知识点：**
+
+- `name`：路由名称，用于反向解析 URL。
+- `<int:id>`：接收整数类型的**动态参数**，传递给视图函数的 `id` 参数。
+- 注意：视图函数必须接收同名参数 id
+- 注意：`views.student_list` 、`views.student_detail` 后面没有括号。
+
+正确：
+
+```python
+path("students/", views.student_list)
+```
+
+错误：
+
+```python
+path("students/", views.student_list())
+```
+
+因为路由需要保存视图函数本身，等到请求到来时再调用，而不是在配置路由时提前执行函数。
+
+#### 6.4.2 DRF 路由器
+
+如果项目使用 `ModelViewSet` 或 `ViewSet`，通常使用 `DefaultRouter` **自动生成**路由，不必为每个 CRUD 操作手动写一个 `path()`。
+
+```python
+# ============================================================
+# 使用 DRF Router 配置 ViewSet
+# ============================================================
+
+# 1. 导入 DRF 路由器
+from rest_framework.routers import DefaultRouter
+
+# 2. 导入当前 App 中的视图集
+from .views import BookViewSet
+
+# 3. 创建路由器对象
+router = DefaultRouter()
+
+# 4. 注册视图集
+# "books" 是 URL 前缀
+# BookViewSet 是负责处理请求的视图集
+# basename 是生成路由名称时使用的基础名称
+router.register("books", BookViewSet, basename="book")
+
+# 5. 将路由器自动生成的路由加入 urlpatterns
+# *router.urls 表示把 router.urls 中的路由逐项展开
+urlpatterns = [
+    *router.urls,
+]
+```
+`*router.urls` 自动生成的路由
+```
++---- GET     /api/books/      获取图书列表
+|
++---- POST    /api/books/      创建图书
+|
++---- GET     /api/books/1/    获取图书详情
+|
++---- PUT     /api/books/1/    完整更新图书
+|
++---- PATCH   /api/books/1/    部分更新图书
+|
++---- DELETE  /api/books/1/    删除图书
+```
+
+如果项目已经有普通路由，可以直接混合使用：
+
+```python
+urlpatterns = [
+    # 普通 FBV
+    path("bulletin-board/", views.bulletin_board, name="bulletin-board"),
+
+    # 普通 CBV
+    path("login/", views.LoginView.as_view(), name="login"),
+
+    # DRF Router 自动生成的路由
+    *router.urls,
+]
+```
+#### 6.4.3 App 路由核心格式总结
+
+```python
+from django.urls import path
+from . import views
+from rest_framework.routers import DefaultRouter
+from .views import 视图集
+
+router = DefaultRouter()
+router.register("路由地址", 视图集, basename="基础路由名称")
+
+urlpatterns = [
+path("路由地址", views.视图函数, name="路由名称"),
+path("路由地址 + 动态参数", views.视图函数, name="路由名称"),
+path("路由地址", views.视图类.as_view(), name="路由名称"),
+*router.urls,
+]
+```
 
 ## 7. serializers.py
 
