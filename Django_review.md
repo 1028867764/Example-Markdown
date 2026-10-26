@@ -87,12 +87,6 @@ python manage.py migrate
 
 # 创建管理员账号
 python manage.py createsuperuser
-
-# 检查项目配置
-python manage.py check
-
-# 进入 Django Shell
-python manage.py shell
 ```
 
 ### 1.3 创建 Django 应用
