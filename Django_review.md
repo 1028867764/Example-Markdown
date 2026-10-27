@@ -157,6 +157,218 @@ INSTALLED_APPS = [
 └── media/                  用户上传文件（图片、附件，可选）
 ```
 
+## 1.5 虚拟环境
+
+实际开发时，建议为每个 Python 项目创建独立的虚拟环境，用于安装和管理项目所需的依赖包。
+
+### 1.5.1 什么是虚拟环境？
+
+**虚拟环境（Virtual Environment）** 是 Python 提供的一种独立的项目依赖管理环境，可以让不同项目使用各自的 Python 包，减少依赖冲突。
+
+例如：
+
+- 项目 A 使用 Django 4.2。
+- 项目 B 使用 Django 5.2。
+
+如果两个项目共用同一套 Python 环境，安装或升级依赖时就可能产生冲突。使用虚拟环境后，两个项目可以分别安装所需版本的 Django，互不影响。
+
+注意：虚拟环境并不是一台真正的虚拟计算机，而是一个隔离 Python 包和相关环境配置的目录。
+
+### 1.5.2 为什么需要使用虚拟环境？
+
+主要有以下几个原因：
+
+1. **避免依赖冲突：** 不同项目可以安装不同版本的 Django 和其他 Python 包。
+2. **方便管理依赖：** 每个项目可以单独安装、升级和管理所需的依赖。
+3. **便于迁移项目：** 可以通过 `requirements.txt` 记录依赖，方便在其他电脑或服务器上重新配置环境。
+4. **保持全局环境整洁：** 不必把所有项目的依赖都安装到全局 Python 环境中。
+
+### 1.5.3 创建项目目录
+
+以下以 Windows 系统、D 盘和 Django 项目为例。
+
+先在 D 盘创建项目目录：
+
+```text
+D:\DjangoProject\
+```
+
+打开 VS Code，选择「文件 → 打开文件夹」，打开 `D:\DjangoProject`。
+
+也可以在终端中执行：
+
+```powershell
+# 创建项目目录
+mkdir D:\DjangoProject
+
+# 进入项目目录
+cd D:\DjangoProject
+```
+
+### 1.5.4 创建虚拟环境
+
+确保电脑已经安装 Python，并且可以在终端中运行 `python` 命令。
+
+在 VS Code 终端中执行：
+
+```powershell
+# 创建名为 .venv 的虚拟环境
+python -m venv .venv
+```
+
+执行成功后，项目目录中会生成 `.venv` 文件夹。
+
+如果电脑无法识别 `python` 命令，可以尝试使用：
+
+```powershell
+py -m venv .venv
+```
+
+### 1.5.5 激活虚拟环境
+
+在 VS Code 的 PowerShell 终端中执行：
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+激活成功后，终端提示符前通常会出现 `(.venv)`，例如：
+
+```text
+(.venv) PS D:\DjangoProject>
+```
+
+这表示当前终端已经启用该虚拟环境。
+
+如果 PowerShell 提示禁止执行脚本，可以改用 VS Code 的命令提示符（CMD）终端，并执行：
+
+```bat
+.venv\Scripts\activate.bat
+```
+
+### 1.5.6 在虚拟环境中安装 Django
+
+激活虚拟环境后，执行：
+
+```powershell
+# 更新 pip
+python -m pip install --upgrade pip
+
+# 安装 Django
+python -m pip install django
+```
+
+这里使用 `python -m pip`，可以更明确地调用当前 Python 环境对应的 pip，降低装错环境的风险。
+
+检查 Django 是否安装成功：
+
+```powershell
+python -m django --version
+```
+
+如果显示 Django 版本号，就说明安装成功。
+
+### 1.5.7 创建 Django 项目
+
+在 `D:\DjangoProject` 目录中执行：
+
+```powershell
+# 在当前目录创建 Django 项目配置
+django-admin startproject config .
+```
+
+注意命令末尾的 `.`，表示直接在当前目录创建项目，而不是额外嵌套一层目录。
+
+项目结构如下：
+
+```text
+D:\DjangoProject\
+├── .venv\             # 虚拟环境及项目依赖
+├── config\            # Django 项目配置
+│   ├── __init__.py
+│   ├── settings.py
+│   ├── urls.py
+│   ├── asgi.py
+│   └── wsgi.py
+├── manage.py          # Django 项目管理入口
+└── requirements.txt   # 项目依赖清单（后续生成）
+```
+
+### 1.5.8 运行 Django 项目
+
+执行：
+
+```powershell
+python manage.py runserver
+```
+
+如果终端显示开发服务器启动信息，就可以在浏览器中访问：
+
+```text
+http://127.0.0.1:8000/
+```
+
+看到 Django 的欢迎页面，就说明项目已经成功运行。
+
+按 `Ctrl + C` 可以停止开发服务器。
+
+### 1.5.9 导出项目依赖
+
+当项目安装了 Django 和其他依赖后，可以执行：
+
+```powershell
+python -m pip freeze > requirements.txt
+```
+
+这会将当前虚拟环境中通过 pip 安装的包及其版本写入 `requirements.txt`。
+
+以后在另一台电脑上配置项目时，可以在新的虚拟环境中执行：
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
+即可根据清单安装对应版本的依赖。
+
+注意：`pip freeze` 会记录当前环境中通过 pip 安装的所有包，因此应确保当前虚拟环境没有混入其他项目的依赖。
+
+### 1.5.10 VS Code 怎样使用指定的虚拟环境？
+
+创建虚拟环境后，建议让 VS Code 使用它对应的 Python 解释器。
+
+操作步骤：
+
+1. 按 `Ctrl + Shift + P` 打开命令面板。
+2. 输入并选择 `Python: Select Interpreter`。
+3. 选择项目中的 `.venv` 对应的 Python 解释器，通常是：
+
+```text
+D:\DjangoProject\.venv\Scripts\python.exe
+```
+
+如果列表中没有该选项，可以选择手动指定解释器路径。
+
+选择后，VS Code 的 Python 相关功能会使用指定的解释器。不过，已经打开的终端不一定会自动切换环境，必要时重新打开终端并激活虚拟环境。
+
+### 1.5.11 注意事项
+
+- 每个项目通常使用独立的虚拟环境。
+- `.venv` 一般不上传到 GitHub，因为它体积较大，而且与操作系统和本地环境有关。
+- 建议将 `.venv/` 添加到项目的 `.gitignore` 文件中。
+- `requirements.txt` 通常需要提交到 GitHub，以便其他人安装项目依赖。
+- 删除 `.venv` 不会直接删除项目代码，但会删除该虚拟环境中安装的依赖；需要时可以重新创建并安装依赖。
+- 虚拟环境主要用于隔离 Python 包及相关环境配置，并不完全隔离 Python 解释器本身，也不能保证所有系统级依赖都互不影响。
+
+**常用命令总结：**
+
+| 目的 | 命令 |
+|---|---|
+| 创建虚拟环境 | `python -m venv .venv` |
+| 激活虚拟环境（PowerShell） | `.\.venv\Scripts\Activate.ps1` |
+| 安装 Django | `python -m pip install django` |
+
+对于初学者，建议养成一个习惯：**进入项目目录 → 激活虚拟环境 → 安装依赖 → 开发和运行项目。**（但是我喜欢偷懒，一般来说，某个项目很重要的话，我才会先激活虚拟环境再进行开发或运行项目，**其余的不重要的项目我都懒得激活虚拟环境**）
+
 # 2. settings.py
 （略，不懂的问 AI ）
 
