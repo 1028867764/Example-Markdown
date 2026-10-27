@@ -145,14 +145,15 @@ INSTALLED_APPS = [
 ├── manage.py               ✅ 核心脚本！命令入口（migrate、runserver、createsuperuser都靠它）
 ├── 项目配置包，和根同名 project/
 │   ├── settings.py         ✅ 全局配置：INSTALLED_APPS、数据库、时区、静态文件
-│   ├── urls.py             ✅ 项目总路由，分发到各个子app的urls
+│   ├── urls.py             ✅ 项目主路由，分发到各个子app的urls
 ├── 子app/
 │   ├── models.py           ✅ 数据表模型
 │   ├── admin.py            ✅ 后台注册、Inline
-│   ├── views.py            ✅ 视图函数/视图集（DRF的ViewSet写这里）
-│   ├── urls.py             ✅ app子路由（⚠️需新建）
+│   ├── views.py            ✅ FBV、CBV
+│   ├── urls.py             ✅ App 子路由（⚠️需新建）
 │   ├── serializers.py      ✅ DRF序列化器（⚠️需新建）
-│   └── permissions.py      ✅ 认证与权限（authentication/authorization，⚠️需新建）
+│   ├── authentications.py  ✅ 认证（authentication，⚠️需新建）
+│   └── permissions.py      ✅ 鉴权（authorization，⚠️需新建）
 └── media/                  用户上传文件（图片、附件，可选）
 ```
 
@@ -366,6 +367,47 @@ class Sense(models.Model):
     def __str__(self):
         return self.full_info or "无内容"
 ```
+
+### 3.7 Django 内置的用户模型
+
+Django 内置了用户模型 `User`，用于管理网站用户的基本信息和账号功能，例如登录、密码验证和权限管理。
+
+**常见字段：**
+
+| 字段 | 作用 |
+|---|---|
+| `username` | 用户名 |
+| `password` | 密码（数据库中存储的是哈希值，不是明文） |
+| `is_active` | 账号是否启用 |
+| `is_staff` | 是否可以登录 Django 管理后台 |
+| `is_superuser` | 是否拥有超级用户权限 |
+| `email` | 邮箱 |
+| `first_name` | 名 |
+| `last_name` | 姓 |
+
+**常见操作：**
+
+```python
+# 查询并获取用户
+user = User.objects.get(username="alice")
+
+# 创建用户（自动处理密码哈希）
+user = User.objects.create_user(
+    username="alice",
+    password="123456",
+    email="alice@example.com",
+)
+
+# 检查账号是否启用
+if not user.is_active:
+    print("账号已禁用")
+```
+
+**注意：**
+
+- 创建用户时，应该使用 `create_user()` 或 `set_password()` 设置密码，不要直接将明文密码赋给 `password` 字段。
+- `is_staff` 表示是否具有登录 Django 管理后台的资格，不代表拥有全部管理权限。
+- 如果项目需要额外的用户字段，例如头像、手机号，或者希望使用邮箱作为登录标识，可以考虑自定义用户模型。
 
 ## 4. admin.py
 
@@ -1716,4 +1758,627 @@ def book_list(request):
 
 这个视图只负责查询和输出数据，不涉及反序列化。
 
-## 8. permissions.py
+## 8. authentications.py 和 permissions.py
+
+### 8.1 Authentication（身份认证）
+
+**Authentication 的作用是识别当前请求来自谁。**
+
+例如，用户登录成功后，服务器发给客户端一个 JWT Token。客户端之后访问需要登录的 API 时，在请求头中携带这个 Token，DRF 就可以验证 Token 并识别用户身份。
+
+#### 8.1.1 常见认证方式
+
+| 认证方式 | 说明 |
+|---|---|
+| `SessionAuthentication` | 使用 Django Session 识别用户 |
+| `JWTAuthentication` | 使用 JWT Token 认证用户身份 |
+
+#### 8.1.2 Authentication、Permission 与 APIException 的关系
+
+可以把它们理解为请求处理过程中的三个不同职责。
+
+```text
+客户端发送请求
+        |
+        v
+Authentication --> 你是谁？
+识别用户身份
+        |
+        v
+Permission --> 你有权做什么？
+检查是否允许访问
+        |
+        v
+执行视图中的业务逻辑
+        |
+        +---- 遇到 API 异常 APIException
+        |          |
+        |          v
+        |     DRF 转换为错误响应
+        |
+        v
+返回正常响应
+```
+
+例如：
+
+- Token 无效：身份认证可能失败。
+- 用户没有修改权限：权限检查可能拒绝访问。
+- 图书不存在：视图可以抛出 `NotFound`。
+- 图书库存不足：业务逻辑可以抛出自定义异常。
+
+### 8.2 JWTAuthentication
+
+`JWTAuthentication` 是 `djangorestframework-simplejwt` 提供的 JWT 认证类。
+
+JWT 是 JSON Web Token 的缩写，常用于 Web API 的用户身份认证。
+
+#### 8.2.1 第一步：安装依赖
+
+在终端执行：
+
+```bash
+pip install djangorestframework-simplejwt
+```
+
+#### 8.2.2 第二步：配置认证方式
+
+DRF 可以在 `settings.py` 中全局配置认证方式，也可以在视图中通过 `authentication_classes` 属性单独配置。
+
+**方式一：全局配置（`settings.py`）**
+
+```python
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ],
+}
+```
+
+全局配置后，默认使用 JWT 认证的视图不需要重复声明。
+
+**方式二：视图单独配置**
+
+在 `APIView` 或 `ModelViewSet` 中：
+
+```python
+# CBV 用属性配置
+
+from rest_framework.views import APIView
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
+
+class BookView(APIView):
+    authentication_classes = [JWTAuthentication]
+```
+
+在函数视图中：
+
+```python
+# FBV 用装饰器配置
+
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+)
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
+
+@api_view(["GET"])
+@authentication_classes([JWTAuthentication])
+def book_list(request):
+    pass
+```
+
+**注意：**
+
+- `DEFAULT_AUTHENTICATION_CLASSES`：配置全局默认认证方式。
+- 属性配置、装饰器配置的优先级高于全局默认配置。
+
+#### 8.2.3 第三步：客户端携带 Token
+
+客户端请求 API 时，在 HTTP 请求头中加入：
+
+```http
+Authorization: Bearer 你的JWT_TOKEN
+```
+
+其中：
+
+- `Authorization`：HTTP 请求头名称。
+- `Bearer`：表示使用 Bearer Token 认证方案。
+- `你的JWT_TOKEN`：登录成功后获得的 Token。
+
+#### 8.2.4 第四步：在视图中获取用户
+
+```python
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def my_profile(request):
+    # 获取当前通过认证的用户
+    user = request.user
+
+    # 返回当前用户的信息
+    return Response({
+        "username": user.username,
+    })
+```
+
+这里的 `IsAuthenticated` 表示只有已认证用户才能访问。
+
+如果请求没有有效的认证信息，DRF 会根据认证方式和请求情况返回相应的认证错误响应。
+
+### 8.3 自定义认证
+
+`JWTAuthentication` 是 DRF Simple JWT 提供的认证类。自定义认证时，可以继承 `JWTAuthentication`，重写 `authenticate()` 方法，扩展原有认证逻辑。
+
+**示例：继承 JWTAuthentication**
+
+```python
+# authentications.py
+
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.exceptions import AuthenticationFailed
+
+
+class CustomJWTAuthentication(JWTAuthentication):
+    def authenticate(self, request):
+        # 执行原有 JWT 认证
+        result = super().authenticate(request)
+
+        # 没有提供认证凭据
+        if result is None:
+            return None
+
+        # 获取用户和已验证的 JWT
+        user, validated_token = result
+
+        # 检查用户是否填写邮箱
+        if not user.email:
+            raise AuthenticationFailed("请先填写邮箱")
+
+        # 返回认证结果
+        return (user, validated_token)
+```
+
+在视图中使用：
+
+```python
+authentication_classes = [CustomJWTAuthentication]
+```
+
+**重点理解：**
+
+> `JWTAuthentication.authenticate(request)` 认证成功时，返回 `(user, validated_token)`。
+
+### 8.4 两个 authenticate() 的区别
+
+#### 8.4.1 Django 的 `authenticate()`: 验证用户名和密码
+
+常见于登录视图 `views.py`
+
+```python
+from django.contrib.auth import authenticate
+
+user = authenticate(
+    request,
+    username=username,
+    password=password,
+)
+```
+
+- 作用：验证用户提交的用户名和密码是否正确。
+- 验证成功：返回用户对象 `user`。
+- 验证失败：返回 `None`。
+
+#### 8.4.2 DRF 的 `JWTAuthentication.authenticate()`: 验证 JWT
+
+常见于 API 请求的认证流程
+
+```python
+result = super().authenticate(request)
+```
+
+- 作用：从请求头中获取 JWT，并验证令牌。
+- 验证成功：通常返回 `(user, validated_token)`。
+- 没有提供认证凭据：通常返回 `None`。
+- 令牌无效：可能抛出认证异常。
+
+#### 8.4.3 Django 的登录流程示例
+
+```python
+from django.contrib.auth import authenticate, login
+
+class LoginView(APIView):
+
+    def post(self, request):
+        username = request.data.get("username")
+        password = request.data.get("password")
+        
+        user = authenticate(
+            request,
+            username=username,
+            password=password,
+        )
+
+        if user is not None:
+            login(request, user)
+            # 登录成功
+        else:
+            # 用户名或密码错误
+            pass
+```
+
+这里的 `authenticate()` 验证账号密码，`login()` 则将用户登录状态保存到 Django Session 中。这个示例是 Django Session 登录方式，不是 JWT 登录方式。
+
+#### 8.4.4 记住这张表
+
+| 方法                                   | 所属             | 验证什么      | 成功返回                      |
+| ------------------------------------ | -------------- | --------- | ------------------------- |
+| `django.contrib.auth.authenticate()` | Django         | 用户名、密码等凭据 | `user`                    |
+| `JWTAuthentication.authenticate()`   | DRF Simple JWT | 请求中的 JWT  | `(user, validated_token)` |
+
+最重要的区别：
+
+Django 的 `authenticate()` 常见于登录视图；`JWTAuthentication` 的 `authenticate()` 常见于自定义认证方法。
+
+两者名称相同，但所属模块、参数、返回值和使用场景都不同。
+
+### 8.5 DRF 内置权限
+
+**Permission 的作用是判断当前请求是否有权执行某项操作。**
+
+例如：
+
+- 游客只能查看公开内容。
+- 登录用户可以查看自己的个人资料。
+- 管理员可以管理公告。
+- 只有对象的所有者才能修改自己的数据。
+
+DRF 内置了一些常用权限类。
+
+| 权限类 | 作用 |
+|---|---|
+| `AllowAny` | 任何人都可以访问，包括未登录用户 |
+| `IsAuthenticated` | 只有已认证用户可以访问 |
+| `IsAdminUser` | 通常要求用户的 `is_staff=True` |
+| `IsAuthenticatedOrReadOnly` | 已认证用户可以进行允许的操作；未认证用户只能执行安全方法 |
+
+### 8.6 配置权限
+
+DRF 配置权限主要有以下几种方式：
+
+1. 使用 FBV 装饰器。
+2. 使用 `APIView` 类属性。
+3. 使用 `ViewSet` 类属性。
+4. 在 `settings.py` 中配置全局默认权限。
+
+#### 8.6.1 方式一：FBV 装饰器
+
+适用于使用 `@api_view` 编写的函数视图（FBV）。
+
+```python
+# views.py
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def private_api(request):
+    # 只有通过权限检查的用户才能执行到这里
+    return Response({
+        "message": "你已经通过身份认证",
+    })
+```
+
+#### 8.6.2 方式二：APIView 类属性
+
+适用于继承 `APIView` 的类视图（CBV）。
+
+```python
+# views.py
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+
+class PrivateAPIView(APIView):
+
+    # 配置当前视图的权限类
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response({
+            "message": "你已经通过权限检查",
+        })
+```
+
+说明：
+
+- `permission_classes` 是一个列表。
+- 可以配置一个或多个权限类。
+- 同一个视图配置多个权限类时，默认关系是「且」（AND）。
+
+例如：
+
+```python
+permission_classes = [
+    IsAuthenticated,
+    IsAdminUser,
+]
+```
+
+这表示用户既要通过身份认证，又要满足管理员权限。
+
+#### 8.6.3 方式三：ViewSet 类属性
+
+适用于 DRF 的 `ViewSet`、`ModelViewSet` 等视图集。
+
+```python
+# views.py
+from rest_framework.viewsets import ModelViewSet
+from rest_framework.permissions import IsAuthenticated
+
+from .models import Book
+from .serializers import BookSerializer
+
+
+class BookViewSet(ModelViewSet):
+
+    # 指定查询的数据
+    queryset = Book.objects.all()
+
+    # 指定序列化器
+    serializer_class = BookSerializer
+
+    # 配置当前 ViewSet 的权限
+    permission_classes = [IsAuthenticated]
+```
+
+这里的权限配置方式与 `APIView` 相同。
+
+如果使用 `DefaultRouter` 注册这个 ViewSet，路由对应的各个操作都会使用这项权限配置，除非你另外覆盖相关行为或权限设置。
+
+#### 8.6.4 方式四：在 settings.py 中配置全局默认权限
+
+如果希望整个 DRF 项目默认使用相同的权限规则，可以在项目的 `settings.py` 中配置。
+
+```python
+# settings.py
+
+REST_FRAMEWORK = {
+    # 全局默认权限配置
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+}
+```
+
+这样，默认情况下，DRF API 视图会要求用户通过身份认证。
+
+如果希望 API 默认允许所有人访问，可以改成：
+
+```python
+REST_FRAMEWORK = {
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.AllowAny",
+    ],
+}
+```
+
+注意：
+
+- 全局权限只影响 DRF 相关视图，不会自动保护普通 Django 视图。
+- 如果某个视图单独设置了 `permission_classes`，就会使用该视图指定的权限类，而不是把它与全局默认权限列表自动合并。换句话说，该视图指定的权限类的优先级高于全局默认权限。
+- 如果没有配置全局权限，DRF 默认通常使用 `AllowAny`。
+
+#### 8.6.5 四种方式对比
+
+| 配置方式 | 使用位置 | 示例 |
+|---|---|---|
+| 装饰器 | FBV | `@permission_classes([IsAuthenticated])` |
+| 类属性 | `APIView` | `permission_classes = [IsAuthenticated]` |
+| 类属性 | `ViewSet` / `ModelViewSet` | `permission_classes = [IsAuthenticated]` |
+| 全局配置 | `settings.py` | `DEFAULT_PERMISSION_CLASSES` |
+
+### 8.7 自定义权限类
+
+当 DRF 自带的权限类无法满足需求时，可以继承 `BasePermission`，编写自己的权限规则。
+
+例如：
+
+```python
+# permissions.py
+
+from rest_framework.permissions import BasePermission, SAFE_METHODS
+
+class MyPermission(BasePermission):
+    """
+    已认证普通用户只可读，管理员可以增删改，未认证用户无权限。
+    """
+
+    # 覆盖原来的 has_permission 方法
+    def has_permission(self, request, view):
+        # 未认证用户直接拒绝
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        # 安全方法(GET/HEAD/OPTIONS) → 已认证用户可以读
+        if request.method in SAFE_METHODS:
+            return True
+
+        # 非安全方法 → 只有管理员可以操作
+        return request.user.is_staff
+
+        # 返回一个布尔值，True 表示放行（有权限），False 表示拦截（无权限）
+```
+
+在视图中使用：
+
+```python
+@permission_classes([MyPermission])
+```
+或：
+```python
+permission_classes = [MyPermission]
+```
+
+#### BasePermission 的两个重要方法
+
+| 方法 | 作用 |
+|---|---|
+| `has_permission(self, request, view)` | 检查请求是否有权进入视图 |
+| `has_object_permission(self, request, view, obj)` | 检查请求是否有权操作某个具体对象 |
+
+例如，如果你希望只有图书的创建者才能修改该图书，可以在对象权限中检查创建者身份。
+
+```python
+from rest_framework.permissions import BasePermission, SAFE_METHODS
+
+
+class IsBookOwnerOrReadOnly(BasePermission):
+
+    def has_object_permission(self, request, view, obj):
+        # 任何人都可以执行安全方法
+        if request.method in SAFE_METHODS:
+            return True
+
+        # 其他操作只允许图书的创建者执行
+        return obj.owner == request.user
+```
+
+注意：示例假设 `Book` 模型具有 `owner` 字段。使用对象权限时，视图还必须正确获取对象并触发对象权限检查；仅定义这个方法，并不意味着所有列表数据都会自动逐条检查。
+
+### 8.8 SAFE_METHODS（安全 HTTP 方法）
+
+`SAFE_METHODS` 是 DRF 在 `rest_framework.permissions` 中提供的常量。
+
+它包含三个 HTTP 方法：
+
+```python
+from rest_framework.permissions import SAFE_METHODS
+
+print(SAFE_METHODS)
+
+# ('GET', 'HEAD', 'OPTIONS')
+```
+
+它们的含义如下：
+
+| 方法 | 作用 |
+|---|---|
+| `GET` | 获取资源 |
+| `HEAD` | 获取响应头，通常不返回响应正文 |
+| `OPTIONS` | 查询接口支持的通信选项等信息 |
+
+这些方法在 HTTP 语义上属于安全方法，通常用于读取信息，而不是请求修改服务器资源。
+
+在权限判断中，经常写成：
+
+```python
+if request.method in SAFE_METHODS:
+    return True
+```
+
+这表示：如果请求方法是 `GET`、`HEAD` 或 `OPTIONS`，就允许通过当前这条权限检查。
+
+### 8.9 APIException
+
+`APIException` 是 DRF 异常体系的基础类，适合在 API 代码中抛出能够转换为 HTTP 响应的异常。
+
+例如，用户请求某项资源时，如果不符合业务规则，可以抛出相应异常，让 DRF 处理并生成错误响应。
+
+#### 8.9.1 自定义 APIException
+
+如果项目有特定的业务错误，可以创建自己的异常类。
+
+```python
+from rest_framework.exceptions import APIException
+
+
+class BookOutOfStock(APIException):
+    # 自定义 HTTP 状态码
+    status_code = 400
+
+    # 默认错误提示
+    default_detail = "图书库存不足"
+
+    # 默认错误代码
+    default_code = "book_out_of_stock"
+
+    # 一般设置 status_code 和 default_detail 就够用了
+    # default_detail 还可以是字典格式，例如：
+    # default_detail = {"code": 666, "message": "设备不存在"}
+```
+
+视图中使用时：
+
+```python
+raise BookOutOfStock()
+```
+
+也可以传入具体的错误提示：
+
+```python
+raise BookOutOfStock("当前图书库存不足，无法购买")
+```
+
+#### 8.9.2 Flutter 客户端如何获取异常信息
+
+当 Django REST Framework 视图抛出 `APIException` 时，DRF 会将异常转换成 HTTP 响应。
+
+例如：
+
+```python
+raise BookOutOfStock("当前图书库存不足，无法购买")
+```
+
+客户端收到的响应体大致如下：
+
+```json
+{
+    "detail": "当前图书库存不足，无法购买"
+}
+```
+
+HTTP 状态码为 `400`。
+
+**Flutter 客户端提取错误信息：**
+
+使用 `http` 和 `dart:convert` 处理响应：
+
+```dart
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
+final response = await http.post(
+  Uri.parse('http://127.0.0.1:8000/api/books/'),
+);
+
+if (response.statusCode >= 400) {
+  final data = jsonDecode(response.body);
+  final error = data['detail'] ?? '请求失败';
+
+  print(error);
+}
+```
+
+输出：
+
+```text
+当前图书库存不足，无法购买
+```
+
+**注意：**
+
+- `response.statusCode`：HTTP 状态码，例如 `400`。
+- `response.body`：服务端返回的响应内容。
+- `jsonDecode(response.body)`：将 JSON 字符串转换为 Dart 对象。
+- `data['detail']`：提取 DRF 返回的异常提示。
