@@ -1,7 +1,7 @@
 
-## 1. 预备知识
+# 1. 预备知识
 
-### 1.1 创建 Django 项目
+## 1.1 创建 Django 项目
 
 在创建项目之前，需要先安装 Django。
 
@@ -65,7 +65,7 @@ python manage.py runserver
 
 注意：`runserver` 主要用于本地开发和调试，不建议直接用于正式生产环境。
 
-### 1.2 Django 常用命令行
+## 1.2 Django 常用命令行
 
 创建项目后，就可以使用 `manage.py` 执行各种管理命令。
 
@@ -89,7 +89,7 @@ python manage.py migrate
 python manage.py createsuperuser
 ```
 
-### 1.3 创建 Django 应用
+## 1.3 创建 Django 应用
 
 Django 项目创建完成后，通常还需要创建一个或多个 App ，用来组织不同的业务功能。
 
@@ -139,7 +139,7 @@ INSTALLED_APPS = [
 
 这样，Django 才会将 `books` 作为项目中的已安装应用进行管理。
 
-### 1.4 Django项目骨架一览
+## 1.4 Django项目骨架一览
 ```
 项目根目录 project/
 ├── manage.py               ✅ 核心脚本！命令入口（migrate、runserver、createsuperuser都靠它）
@@ -157,85 +157,110 @@ INSTALLED_APPS = [
 └── media/                  用户上传文件（图片、附件，可选）
 ```
 
-## 2. settings.py
+# 2. settings.py
 （略，不懂的问 AI ）
 
-## 3. models.py
-### 3.1 `models.Model` 以及 常用的 `Field`
+# 3. models.py
+## 3.1 `models.Model` 以及 常用的 `Field`
 
 > ✅ 核心前提：自定义模型**必须继承 `models.Model`**
 
 > 只有继承它，Django 才会识别这是数据库模型，自动生成数据表、提供ORM、支持Admin。不继承，就只是普通Python类，和数据库无关。
 
 ```python
-from django.db import models  # 从 django.db 导入 models 模块
+from django.db import models # 从 django.db 导入 models 模块
 
 
-class Sense(models.Model):
-    # 短字符串，必须写 max_length
-    word_text = models.CharField(max_length=100, blank=True, null=True)
+class Publisher(models.Model):
+    # AutoField：自动递增的整数主键。
+    # primary_key=True：将该字段设置为主键，用于唯一标识每条记录。
+    # Django 默认会自动添加 id 主键字段，因此通常不需要手动定义。
+    # id = models.AutoField(primary_key=True)
 
-    # 长文本，不需要 max_length
-    explanation = models.TextField(blank=True, null=True)
-
-    # 整数
-    sort = models.IntegerField(default=0, blank=True, null=True)
-
-    # 浮点数，存在精度误差 ❌
-    score_float = models.FloatField(default=0.0, blank=True, null=True)
-
-    # 高精度十进制小数，必须指定 max_digits 和 decimal_places ✅
-    score_decimal = models.DecimalField(
-        max_digits=5,  # 总共最多5位数字（整数+小数一起算）
-        decimal_places=2,  # 小数点后保留2位
-        default=0.00,
-        blank=True,
-        null=True,
-    )
-
-    # 布尔型，不建议 null=True；布尔一般只有 True/False
-    is_valid = models.BooleanField(default=True)
-
-    # 日期：创建时自动写入，后续不再改动
-    create_date = models.DateField(auto_now_add=True, blank=True, null=True)
-
-    # 时间：每次保存修改都会自动更新
-    update_time = models.DateTimeField(auto_now=True, blank=True, null=True)
-
-    # 外键示例1：级联删除
-    sense_1 = models.ForeignKey(
-        "Sense",
-        on_delete=models.CASCADE,
-        related_name="case_cascade",
-        blank=True,
-        null=True,
-    )
-    # 外键示例2：主记录删除，此字段置NULL，必须配合 null=True
-    sense_2 = models.ForeignKey(
-        "Sense",
-        on_delete=models.SET_NULL,
-        related_name="case_setnull",
-        blank=True,
-        null=True,
-    )
-    # 外键示例3：主记录删除，此字段设置为预先定义的默认值
-    sense_3 = models.ForeignKey(
-        "Sense",
-        on_delete=models.SET_DEFAULT,
-        related_name="case_setdefault",
-        default="设为默认",
-        blank=True,
-        null=True,
-    )
-
-    # 多对多：默认 symmetrical=True，即 “互为关系”，这种情况下（symmetrical≠False）不需要 related_name，
-    tag_list = models.ManyToManyField("Tag", blank=True)
+    # CharField：短字符串，必须设置 max_length。
+    name = models.CharField(max_length=100)
 
     def __str__(self):
-        return self.word_text or "无内容"
+        return self.name
+
+
+class Tag(models.Model):
+    # CharField：存储标签名称。
+    name = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.name
+
+
+class Book(models.Model):
+    # CharField：短字符串，例如书名。
+    title = models.CharField(max_length=100)
+
+    # TextField：长文本，不需要设置 max_length。
+    description = models.TextField(blank=True, null=True)
+
+    # IntegerField：整数，例如库存数量。
+    stock = models.IntegerField(default=0)
+
+    # FloatField：浮点数，可能存在精度误差。
+    score_float = models.FloatField(default=0.0)
+
+    # DecimalField：精确十进制小数，适合存储价格。必须指定 max_digits 和 decimal_places
+    # max_digits：数字总位数；decimal_places：小数位数。
+    price = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        default=0.00,
+    )
+
+    # BooleanField：布尔值，表示图书是否上架。不建议 null=True
+    is_active = models.BooleanField(default=True)
+
+    # DateField：日期；auto_now_add=True 表示创建时自动设置。
+    create_date = models.DateField(auto_now_add=True)
+
+    # DateTimeField：日期和时间；auto_now=True 表示每次保存时自动更新。
+    update_time = models.DateTimeField(auto_now=True)
+
+    # ForeignKey：多对一关系，多本图书可以属于同一家出版社。
+    # CASCADE：删除出版社时，同时删除关联的图书。
+    publisher = models.ForeignKey(
+        Publisher,
+        on_delete=models.CASCADE,
+        related_name="books",
+    )
+
+    # ForeignKey：SET_NULL 表示删除出版社时，将关联字段设为 NULL。
+    # null=True：允许数据库存储 NULL。
+    publisher_set_null = models.ForeignKey(
+        Publisher,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="books_set_null",
+    )
+
+    # ForeignKey：SET_DEFAULT 表示删除出版社时，使用预先设置的默认出版社。
+    # default 必须是有效的出版社主键值，不能直接填写出版社名称。
+    # 此处假设主键为 1 的出版社始终存在。
+    publisher_set_default = models.ForeignKey(
+        Publisher,
+        on_delete=models.SET_DEFAULT,
+        default=1,
+        related_name="books_set_default",
+    )
+
+    # ManyToManyField：多对多关系，一本书可以有多个标签，
+    # 一个标签也可以关联多本书。
+    # 默认 symmetrical=True，即 “互为关系”，这种情况下（symmetrical≠False）不需要 related_name
+    tags = models.ManyToManyField(Tag, blank=True)
+
+    def __str__(self):
+        return self.title
 
     class Meta:
-        ordering = ["sort"]
+        # 默认按照库存数量升序排列。
+        ordering = ["stock"]
 ```
 **切记：每一次创建或修改模型后，都需要执行数据库迁移**
 
@@ -247,16 +272,54 @@ python manage.py makemigrations
 python manage.py migrate
 ```
 
-### 3.2 字段参数中的 `verbose_name` 和 `related_name`
+## 3.2 字段参数中的 `verbose_name` 和 `related_name`
 - verbose_name = "字段的单数显示名称"
 - verbose_name_plural = "字段的复数显示名称"
 - related_name = "内Model反向查询外Model"
 
-一般来说，外Model查询内Model，只需"OuterModel.字段"就能拿到；
+一般来说，外Model查询内Model，只需"OuterModel.关联字段"就能拿到实例；
 
-而反之却不能直接查询，需写成"InnerModel.related_name"的样式才能达到目的
+而反之却不能直接查询，需写成"InnerModel.related_name"的样式才能达到目的。
 
-常见于 `ForeignKey`
+常见于 `ForeignKey`，例如之前的：
+```python
+# models.py 
+
+class Book(models.Model):
+
+    publisher = models.ForeignKey(
+            Publisher,
+            on_delete=models.CASCADE,
+            related_name="books",
+        )
+```
+这里的 `Book` 是外Model，`Publisher` 是内Model。在视图中查询模型时：
+```python
+# views.py
+
+
+
+# ======= 1. 外查内(正向查询)：Book → Publisher =======
+
+book = Book.objects.get(id=1)
+
+# 获取这本书所属的出版社
+publisher = book.publisher # OuterModel.关联字段
+
+print(publisher.name)
+
+
+
+# ======= 2. 内查外(反向查询)：Publisher → Book =======
+
+publisher = Publisher.objects.get(id=1)
+
+# 获取该出版社的所有图书
+books = publisher.books.all() # InnerModel.related_name
+
+for book in books:
+    print(book.title)
+```
 
 ⚠️ 另外要注意，在 `ManyToManyField` 中，当 symmetrical = True（默认）的时候，没有反向查询名字，两边都直接用同一个字段名查。因为关系是对等的：A 和 B 互相绑定，不分 “主、反”。
 ```python
@@ -281,13 +344,13 @@ w2.synonym.all()  # 拿到 [w1] ✅ 直接同样写法！
 ```
 👉 不管是 w1 还是 w2，都用 `.synonym`，没有别的反向名字。
 
-### 3.3 `class Meta:` 模型的元配置
+## 3.3 `class Meta:` 模型的元配置
 - verbose_name = "模型的单数显示名称"
 - verbose_name_plural = "模型的复数显示名称"
 - ordering = ["-A","B"] 👉 负号为逆序
 - unique_together = ("A","B")
 
-### 3.4 `def __str__(self):` 模型实例的“脸”
+## 3.4 `def __str__(self):` 模型实例的“脸”
 可以把它记成：模型里每个单独实例的“脸”，方便在 print()、Django Admin 后台等地方识别这个实例
 ```python
 # 通常：
@@ -318,7 +381,7 @@ class Demo:
 ```
 你可以把 `self.` 理解成，给 Python 解释器加的导盲犬
 
-### 3.5 `IntegerChoices` / `TextChoices` 下拉枚举
+## 3.5 `IntegerChoices` / `TextChoices` 下拉枚举
 作用：枚举选项，用于后台下拉选择
 - `IntegerChoices`：数据库存数字，搭配 `IntegerField`
 - `TextChoices`：数据库存字符串，搭配 `CharField`，必须写 `max_length`
@@ -344,7 +407,7 @@ class Article(models.Model):
     typ = models.CharField(max_length=1, choices=Type.choices, default=Type.N)
 ```
 
-### 3.6 `@property` 只读属性
+## 3.6 `@property` 只读属性
 > 作用：把一个方法伪装成**属性**，调用的时候不用加括号 `()`；只做读取，一般不写保存逻辑。
 > 它**不是数据库字段！不会在数据库生成列**，只是在代码层面动态计算出来的值。
 
@@ -368,7 +431,7 @@ class Sense(models.Model):
         return self.full_info or "无内容"
 ```
 
-### 3.7 Django 内置的用户模型
+## 3.7 Django 内置的用户模型
 
 Django 内置了用户模型 `User`，用于管理网站用户的基本信息和账号功能，例如登录、密码验证和权限管理。
 
@@ -409,9 +472,9 @@ if not user.is_active:
 - `is_staff` 表示是否具有登录 Django 管理后台的资格，不代表拥有全部管理权限。
 - 如果项目需要额外的用户字段，例如头像、手机号，或者希望使用邮箱作为登录标识，可以考虑自定义用户模型。
 
-## 4. admin.py
+# 4. admin.py
 
-### 4.1 导入
+## 4.1 导入
 ```python
 from django.contrib import admin  # 导入 admin 模块
 from .models import 模型1, 模型2, 模型3 # 导入当前 app 中的模型
@@ -432,13 +495,13 @@ class 模型2Admin(admin.ModelAdmin):
     search_fields = ("字段4")
 ```
 
-## 5. views.py
+# 5. views.py
 视图常见的编写方式有两种：
 
 - **FBV**（Function-Based View）：基于函数的视图。
 - **CBV**（Class-Based View）：基于类的视图。
 
-### 5.1 按需导入模型和序列化器
+## 5.1 按需导入模型和序列化器
 ```python
 from .models import 模型1, 模型2, 模型3 # 导入当前 app 中的模型
 from .serializers import ( # 导入当前 app 中的序列化器
@@ -448,8 +511,8 @@ from .serializers import ( # 导入当前 app 中的序列化器
 )
 ```
 
-### 5.2 APIView
-#### 5.2.1 初识 APIView
+## 5.2 APIView
+### 5.2.1 初识 APIView
 ```python
 from rest_framework.views import APIView
 
@@ -542,7 +605,7 @@ Python 的 .get() 方法通常有两个参数：
 # 如果没有写第二个参数（即"默认值"），且要获取的字段名不存在的话，则默认返回 None
 ```
 
-#### 5.2.3 `Response` 对象
+### 5.2.3 `Response` 对象
 ```python
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -574,8 +637,8 @@ class TestView(APIView):
 
 实际开发中，推荐使用 `status.HTTP_...` 常量，而不是到处直接写数字。
 
-### 5.3 ModelViewSet
-#### 5.3.1 初识 ModelViewSet
+## 5.3 ModelViewSet
+### 5.3.1 初识 ModelViewSet
 ```python
 from .models import 模型
 from .serializers import 模型Serializer
@@ -590,7 +653,7 @@ class 模型ViewSet(viewsets.ModelViewSet):
 ```
 结合当前 app 中的 `urls.py` 文件（后面会学到），可以自动生成一整套标准的 CRUD 路由，无须手写每一条 `path()`。
 
-#### 5.3.2 ModelViewSet 自动提供哪些功能？
+### 5.3.2 ModelViewSet 自动提供哪些功能？
 | HTTP 方法  | 默认 action        | 功能     |
 | -------- | ---------------- | ------ |
 | `GET`    | `list`           | 获取数据列表 |
@@ -625,7 +688,7 @@ class StudentViewSet(viewsets.ModelViewSet):
 
 注意：这里的 `1` 是学生记录的主键，实际项目中会根据数据库数据变化。
 
-#### 5.3.3 重写 ModelViewSet 自带的 CRUD 逻辑
+### 5.3.3 重写 ModelViewSet 自带的 CRUD 逻辑
 - 基本模板
 ```python
 from rest_framework import viewsets
@@ -674,7 +737,7 @@ class StudentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save()
 ```
-#### 5.3.4 重写辅助方法之 `get_serializer_class()`
+### 5.3.4 重写辅助方法之 `get_serializer_class()`
 - 动态选择序列化器
 假设你有两个序列化器（后面会学到）：
 ```python
@@ -715,7 +778,7 @@ class StudentViewSet(viewsets.ModelViewSet):
 
         return StudentSerializer
 ```
-#### 5.3.5 重写辅助方法之 `perform_create()`
+### 5.3.5 重写辅助方法之 `perform_create()`
 - 自定义创建逻辑
 假设你的 `Student` 模型有一个 `created_by` 字段，用来记录是谁创建了这条学生记录。
 ```python
@@ -752,9 +815,9 @@ class StudentViewSet(viewsets.ModelViewSet):
         serializer.save(created_by=self.request.user)
 ```
 
-### 5.4 模型管理器 `Model.objects.`
+## 5.4 模型管理器 `Model.objects.`
 在 Django 中，`Model.objects.` 是一个非常重要的知识点。你可以把它理解为：通过 `objects` 管理器，对数据库中的模型数据进行查询、创建、修改和删除。
-#### 5.4.1 查询数据
+### 5.4.1 查询数据
 ```python
 # 1. 查询全部学生，返回 QuerySet（查询集）
 students = Student.objects.all()
@@ -774,7 +837,7 @@ student = Student.objects.filter(age=18).first()
 # 6. 获取最后一条数据
 student = Student.objects.filter(age=18).last()
 ```
-#### 5.4.2 条件查询：常见字段查找
+### 5.4.2 条件查询：常见字段查找
 ```python
 # 等于
 Student.objects.filter(age__exact=18)
@@ -803,7 +866,7 @@ Student.objects.filter(name__endswith="三")
 # 字段是否为 NULL
 Student.objects.filter(email__isnull=True)
 ```
-#### 5.4.3 排序、去重、限制结果
+### 5.4.3 排序、去重、限制结果
 ```python
 # 按年龄升序排列
 Student.objects.order_by("age")
@@ -823,7 +886,7 @@ Student.objects.all()[:5]
 # 取第 2 至第 5 条记录（切片右侧不包含）
 Student.objects.all()[1:5]
 ```
-#### 5.4.4 指定返回字段
+### 5.4.4 指定返回字段
 ```python
 # values()：返回字典组成的 QuerySet
 Student.objects.values("id", "name", "age")
@@ -834,7 +897,7 @@ Student.objects.values_list("name", "age")
 # 只返回 name 字段组成的元组
 Student.objects.values_list("name", flat=True)
 ```
-#### 5.4.5 创建数据
+### 5.4.5 创建数据
 ```python
 # 方法一：create()，创建并保存，返回模型实例
 student = Student.objects.create(
@@ -851,7 +914,7 @@ student = Student(
 )
 student.save()
 ```
-#### 5.4.6 修改数据
+### 5.4.6 修改数据
 ```python
 # 批量修改：将所有 18 岁学生的年龄改为 19
 Student.objects.filter(age=18).update(age=19)
@@ -865,7 +928,7 @@ student.save()
 student.age = 22
 student.save(update_fields=["age"])
 ```
-#### 5.4.7 删除数据
+### 5.4.7 删除数据
 ```python
 # 删除符合条件的学生
 Student.objects.filter(age__lt=18).delete()
@@ -877,7 +940,7 @@ student.delete()
 # 注意：以下操作会删除全部学生记录，请勿随意执行！
 # Student.objects.all().delete()
 ```
-#### 5.4.8 统计与判断
+### 5.4.8 统计与判断
 ```python
 # 统计学生总数
 total = Student.objects.count()
@@ -893,7 +956,7 @@ age_counts = Student.objects.values("age").annotate(
     total=Count("id")
 )
 ```
-#### 5.4.9 获取或创建、获取或更新
+### 5.4.9 获取或创建、获取或更新
 ```python
 # 如果 email 对应的学生存在，就获取；否则创建
 student, created = Student.objects.get_or_create(
@@ -916,7 +979,7 @@ student, created = Student.objects.update_or_create(
     },
 )
 ```
-#### 5.4.10 批量操作
+### 5.4.10 批量操作
 ```python
 # 批量创建：一次提交多个模型对象
 Student.objects.bulk_create([
@@ -933,7 +996,7 @@ for student in students:
 # 将修改后的多个对象批量更新到数据库
 Student.objects.bulk_update(students, ["age"])
 ```
-#### 5.4.11 常见使用原则
+### 5.4.11 常见使用原则
 ```python
 # filter()：返回 QuerySet，适合查多条或零条数据
 students = Student.objects.filter(age__gte=18)
@@ -954,7 +1017,7 @@ updated_count = Student.objects.filter(age=20).update(age=21)
 # delete()：删除符合条件的记录，返回删除统计信息
 # deleted_count, details = Student.objects.filter(age=100).delete()
 ```
-#### 5.4.12 总结
+### 5.4.12 总结
 ```python
 # 常用指令
 
@@ -993,8 +1056,8 @@ Model.objects.filter(字段名__endswith="以指定内容结尾")
 Model.objects.filter(字段名__isnull=True) # 查询字段为 NULL 的
 ```
 
-### 5.5 @api_view([])
-#### 5.5.1 初识 @api_view([])
+## 5.5 @api_view([])
+### 5.5.1 初识 @api_view([])
 `@api_view([])` 是 Django REST Framework（DRF）提供的 FBV 装饰器，用于将普通 Django 函数视图转换为 DRF API 视图，并指定允许使用的 HTTP 请求方法。
 
 最重要的是：方括号 `[]` 中填写允许的请求方法。
@@ -1007,7 +1070,7 @@ Model.objects.filter(字段名__isnull=True) # 查询字段为 NULL 的
 
 表示这个接口只允许使用 `GET` 请求。
 
-#### 5.5.2 基础语法
+### 5.5.2 基础语法
 ```python
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -1028,7 +1091,7 @@ def student_list(request):
 
 注意：`@api_view([])` 如果真的传入空列表，表示没有允许的 HTTP 请求方法，并不是允许所有方法。正常情况下，请求会被拒绝。因此，通常需要填写 `"GET"`、`"POST"` 等方法。
 
-#### 5.5.3 常见 HTTP 方法
+### 5.5.3 常见 HTTP 方法
 
 | 写法                           | 用途     | 常见场景   |
 | ---------------------------- | ------ | ------ |
@@ -1041,7 +1104,7 @@ def student_list(request):
 
 HTTP 方法名一般使用大写字符串。
 
-#### 5.5.4 同一个接口允许 GET 和 POST
+### 5.5.4 同一个接口允许 GET 和 POST
 
 如果希望同一个函数既能查询学生，又能创建学生，可以这样写：
 
@@ -1094,7 +1157,7 @@ serializer = StudentSerializer(students, many=True)
 
 因为 `students` 包含多条学生记录，所以要写 `many=True`。如果序列化的是单个学生对象，则通常不需要它。
 
-#### 5.5.5 与 `APIView`、`ModelViewSet` 的区别
+### 5.5.5 与 `APIView`、`ModelViewSet` 的区别
 
 | 特点        | `@api_view`      | `APIView`            | `ModelViewSet`  |
 | --------- | ---------------- | -------------------- | --------------- |
@@ -1109,8 +1172,8 @@ serializer = StudentSerializer(students, many=True)
 - `APIView`：类写接口。
 - `ModelViewSet`：快速构建标准增删改查接口。
 
-### 5.6 @action()
-#### 5.6.1 初识 @action()
+## 5.6 @action()
+### 5.6.1 初识 @action()
 
 `@action()` 是 Django REST Framework（DRF）中用于 给 `ViewSet` 或 `ModelViewSet` **添加**自定义 API 接口的装饰器。
 
@@ -1125,7 +1188,7 @@ serializer = StudentSerializer(students, many=True)
 
 一句话记忆：**标准 CRUD 用内置方法，额外业务功能用 `@action()`。**
 
-#### 5.6.2 基础语法
+### 5.6.2 基础语法
 ```python
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -1162,9 +1225,9 @@ class StudentViewSet(viewsets.ModelViewSet):
 ```
 假设原来 `StudentViewSet` 的基础路由是 `/api/students/`，只需要在这个基础路由后加上自定义的 `url_path`，即 `/api/students/adult-students/`，请求就会访问该 `@action()` ，并执行 `get_adults()` 方法。
 
-### 5.7 DjangoFilterBackend
+## 5.7 DjangoFilterBackend
 
-#### 5.7.1 初识 DjangoFilterBackend
+### 5.7.1 初识 DjangoFilterBackend
 
 `DjangoFilterBackend` 是 Django REST Framework（DRF）中常用的过滤后端，可以让用户通过 URL 查询参数筛选数据，而不需要自己手动编写大量的判断逻辑。
 
@@ -1188,7 +1251,7 @@ GET /api/students/?gender=男
 
 这就是 `DjangoFilterBackend` 的主要用途：把 URL 中的查询参数转换成 Django ORM 的过滤条件。
 
-#### 5.7.2 安装与配置
+### 5.7.2 安装与配置
 
 #### 5.7.2.1 安装依赖
 在 VS Code 的终端中执行：
@@ -1256,7 +1319,7 @@ class StudentViewSet(viewsets.ModelViewSet):
 ```
 
 如果你只想让部分接口支持过滤，建议先学习第二种方式，更容易理解过滤功能的作用范围。
-#### 5.7.3 最基础的用法：`filterset_fields`
+### 5.7.3 `filterset_fields`
 
 这是最适合初学者掌握的方式，可以快速指定哪些字段允许通过 URL 筛选。
 
@@ -1402,8 +1465,8 @@ Student.objects.filter(name__icontains="张")
 
 注意： 这里的 `filterset_fields` 字典是在声明允许使用的过滤方法，不是让你直接填写过滤值。具体值由请求 URL 传入。
 
-## 6. urls.py
-### 6.1 `urls.py` 是什么？
+# 6. urls.py
+## 6.1 `urls.py` 是什么？
 
 `urls.py` 是 Django 项目中用于配置 URL 路由的文件，主要负责将用户请求的 URL 分配给对应的视图函数或视图类。
 
@@ -1422,12 +1485,12 @@ http://127.0.0.1:8000/api/students/
 
 Django 会根据 URL 路由配置，找到对应的视图，执行查询学生数据、序列化数据等操作，最后返回响应。
 
-### 6.2 项目主路由与 app 路由
+## 6.2 项目主路由与 App 路由
 Django 项目通常将路由分为**项目主路由**和 **App 路由**。
 
 - **项目主路由**：负责引入各个 App 的路由，并设置统一的 URL 前缀。
 - **App 路由**：负责配置当前 App 的具体接口，包括普通视图、类视图和 DRF 的 ViewSet 接口。
-### 6.3 项目主路由
+## 6.3 项目主路由
 
 一个典型的 Django 项目主路由文件如下：
 
@@ -1446,9 +1509,9 @@ urlpatterns = [ # Django 默认识别的路由列表
 ]
 ```
 
-### 6.4 App 路由
+## 6.4 App 路由
 
-#### 6.4.1 基本结构
+### 6.4.1 基本结构
 
 一个典型的 App 路由文件如下：
 
@@ -1505,7 +1568,7 @@ path("students/", views.student_list())
 
 因为路由需要保存视图函数本身，等到请求到来时再调用，而不是在配置路由时提前执行函数。
 
-#### 6.4.2 DRF 路由器
+### 6.4.2 DRF 路由器
 
 如果项目使用 `ModelViewSet` 或 `ViewSet`，通常使用 `DefaultRouter` **自动生成**路由，不必为每个 CRUD 操作手动写一个 `path()`。
 
@@ -1564,7 +1627,7 @@ urlpatterns = [
     *router.urls,
 ]
 ```
-#### 6.4.3 App 路由核心格式总结
+### 6.4.3 App 路由核心格式总结
 
 ```python
 from django.urls import path
@@ -1583,9 +1646,9 @@ path("路由地址", views.视图类.as_view(), name="路由名称"),
 ]
 ```
 
-## 7. serializers.py
+# 7. serializers.py
 
-### 7.1 什么是 Serializer（序列化器）？
+## 7.1 什么是 Serializer（序列化器）？
 
 在 Django REST Framework（DRF）中，序列化器可以将 Django 模型对象或查询集转换为适合 API 输出的数据。"序列化" ≈ "json化"。
 
@@ -1625,7 +1688,7 @@ DRF 将数据渲染为 JSON 格式
 
 严格来说，`ModelSerializer` 负责将模型数据转换为基本数据类型，之后由 DRF 的 Renderer 将数据渲染为 JSON 等格式。
 
-### 7.2 准备 Django 模型
+## 7.2 准备 Django 模型
 
 在学习序列化器前，先准备一个图书模型。
 
@@ -1660,7 +1723,7 @@ python manage.py makemigrations
 python manage.py migrate
 ```
 
-### 7.3 ModelSerializer（模型序列化器）
+## 7.3 ModelSerializer（模型序列化器）
 
 `ModelSerializer` 是 DRF 提供的序列化器类，可以根据 Django 模型自动生成字段，减少重复代码。
 
@@ -1690,7 +1753,7 @@ class BookSerializer(serializers.ModelSerializer):
 
 实际开发中，建议明确列出 `fields`，这样可以控制 API 输出内容，避免模型新增字段后意外暴露不需要的数据。
 
-### 7.4 序列化单个模型对象
+## 7.4 序列化单个模型对象
 
 ```python
 # 查询一本图书
@@ -1714,7 +1777,7 @@ print(serializer.data)
 }
 ```
 
-### 7.5 序列化多个模型对象
+## 7.5 序列化多个模型对象
 
 如果需要输出多本图书，使用 `many=True`。
 
@@ -1731,7 +1794,7 @@ print(serializer.data)
 
 此时，`serializer.data` 返回的是包含多本图书数据的列表。
 
-### 7.6 在 views.py 中使用序列化器
+## 7.6 在 views.py 中使用序列化器
 
 实际项目中，可以在视图中查询数据，再交给序列化器处理，最后返回 API 响应。
 
@@ -1758,22 +1821,22 @@ def book_list(request):
 
 这个视图只负责查询和输出数据，不涉及反序列化。
 
-## 8. authentications.py 和 permissions.py
+# 8. authentications.py 和 permissions.py
 
-### 8.1 Authentication（身份认证）
+## 8.1 Authentication（身份认证）
 
 **Authentication 的作用是识别当前请求来自谁。**
 
 例如，用户登录成功后，服务器发给客户端一个 JWT Token。客户端之后访问需要登录的 API 时，在请求头中携带这个 Token，DRF 就可以验证 Token 并识别用户身份。
 
-#### 8.1.1 常见认证方式
+### 8.1.1 常见认证方式
 
 | 认证方式 | 说明 |
 |---|---|
 | `SessionAuthentication` | 使用 Django Session 识别用户 |
 | `JWTAuthentication` | 使用 JWT Token 认证用户身份 |
 
-#### 8.1.2 Authentication、Permission 与 APIException 的关系
+### 8.1.2 Authentication、Permission 与 APIException 的关系
 
 可以把它们理解为请求处理过程中的三个不同职责。
 
@@ -1807,7 +1870,7 @@ Permission --> 你有权做什么？
 - 图书不存在：视图可以抛出 `NotFound`。
 - 图书库存不足：业务逻辑可以抛出自定义异常。
 
-### 8.2 JWTAuthentication
+## 8.2 JWTAuthentication
 
 `JWTAuthentication` 是 `djangorestframework-simplejwt` 提供的 JWT 认证类。
 
@@ -1821,7 +1884,7 @@ JWT 是 JSON Web Token 的缩写，常用于 Web API 的用户身份认证。
 pip install djangorestframework-simplejwt
 ```
 
-#### 8.2.2 第二步：配置认证方式
+### 8.2.2 第二步：配置认证方式
 
 DRF 可以在 `settings.py` 中全局配置认证方式，也可以在视图中通过 `authentication_classes` 属性单独配置。
 
@@ -1875,7 +1938,7 @@ def book_list(request):
 - `DEFAULT_AUTHENTICATION_CLASSES`：配置全局默认认证方式。
 - 属性配置、装饰器配置的优先级高于全局默认配置。
 
-#### 8.2.3 第三步：客户端携带 Token
+### 8.2.3 第三步：客户端携带 Token
 
 客户端请求 API 时，在 HTTP 请求头中加入：
 
@@ -1889,7 +1952,7 @@ Authorization: Bearer 你的JWT_TOKEN
 - `Bearer`：表示使用 Bearer Token 认证方案。
 - `你的JWT_TOKEN`：登录成功后获得的 Token。
 
-#### 8.2.4 第四步：在视图中获取用户
+### 8.2.4 第四步：在视图中获取用户
 
 ```python
 from rest_framework.decorators import api_view, permission_classes
@@ -1913,7 +1976,7 @@ def my_profile(request):
 
 如果请求没有有效的认证信息，DRF 会根据认证方式和请求情况返回相应的认证错误响应。
 
-### 8.3 自定义认证
+## 8.3 自定义认证类
 
 `JWTAuthentication` 是 DRF Simple JWT 提供的认证类。自定义认证时，可以继承 `JWTAuthentication`，重写 `authenticate()` 方法，扩展原有认证逻辑。
 
@@ -1956,9 +2019,9 @@ authentication_classes = [CustomJWTAuthentication]
 
 > `JWTAuthentication.authenticate(request)` 认证成功时，返回 `(user, validated_token)`。
 
-### 8.4 两个 authenticate() 的区别
+## 8.4 两个 authenticate() 的区别
 
-#### 8.4.1 Django 的 `authenticate()`: 验证用户名和密码
+### 8.4.1 Django 的 `authenticate()`: 验证用户名和密码
 
 常见于登录视图 `views.py`
 
@@ -1976,7 +2039,7 @@ user = authenticate(
 - 验证成功：返回用户对象 `user`。
 - 验证失败：返回 `None`。
 
-#### 8.4.2 DRF 的 `JWTAuthentication.authenticate()`: 验证 JWT
+### 8.4.2 DRF 的 `JWTAuthentication.authenticate()`: 验证 JWT
 
 常见于 API 请求的认证流程
 
@@ -1989,7 +2052,7 @@ result = super().authenticate(request)
 - 没有提供认证凭据：通常返回 `None`。
 - 令牌无效：可能抛出认证异常。
 
-#### 8.4.3 Django 的登录流程示例
+### 8.4.3 Django 的登录流程示例
 
 ```python
 from django.contrib.auth import authenticate, login
@@ -2016,7 +2079,7 @@ class LoginView(APIView):
 
 这里的 `authenticate()` 验证账号密码，`login()` 则将用户登录状态保存到 Django Session 中。这个示例是 Django Session 登录方式，不是 JWT 登录方式。
 
-#### 8.4.4 记住这张表
+### 8.4.4 记住这张表
 
 | 方法                                   | 所属             | 验证什么      | 成功返回                      |
 | ------------------------------------ | -------------- | --------- | ------------------------- |
@@ -2029,7 +2092,7 @@ Django 的 `authenticate()` 常见于登录视图；`JWTAuthentication` 的 `aut
 
 两者名称相同，但所属模块、参数、返回值和使用场景都不同。
 
-### 8.5 DRF 内置权限
+## 8.5 DRF 内置权限
 
 **Permission 的作用是判断当前请求是否有权执行某项操作。**
 
@@ -2049,7 +2112,7 @@ DRF 内置了一些常用权限类。
 | `IsAdminUser` | 通常要求用户的 `is_staff=True` |
 | `IsAuthenticatedOrReadOnly` | 已认证用户可以进行允许的操作；未认证用户只能执行安全方法 |
 
-### 8.6 配置权限
+## 8.6 配置权限
 
 DRF 配置权限主要有以下几种方式：
 
@@ -2058,7 +2121,7 @@ DRF 配置权限主要有以下几种方式：
 3. 使用 `ViewSet` 类属性。
 4. 在 `settings.py` 中配置全局默认权限。
 
-#### 8.6.1 方式一：FBV 装饰器
+### 8.6.1 方式一：FBV 装饰器
 
 适用于使用 `@api_view` 编写的函数视图（FBV）。
 
@@ -2078,7 +2141,7 @@ def private_api(request):
     })
 ```
 
-#### 8.6.2 方式二：APIView 类属性
+### 8.6.2 方式二：APIView 类属性
 
 适用于继承 `APIView` 的类视图（CBV）。
 
@@ -2117,7 +2180,7 @@ permission_classes = [
 
 这表示用户既要通过身份认证，又要满足管理员权限。
 
-#### 8.6.3 方式三：ViewSet 类属性
+### 8.6.3 方式三：ViewSet 类属性
 
 适用于 DRF 的 `ViewSet`、`ModelViewSet` 等视图集。
 
@@ -2146,7 +2209,7 @@ class BookViewSet(ModelViewSet):
 
 如果使用 `DefaultRouter` 注册这个 ViewSet，路由对应的各个操作都会使用这项权限配置，除非你另外覆盖相关行为或权限设置。
 
-#### 8.6.4 方式四：在 settings.py 中配置全局默认权限
+### 8.6.4 方式四：在 settings.py 中配置全局默认权限
 
 如果希望整个 DRF 项目默认使用相同的权限规则，可以在项目的 `settings.py` 中配置。
 
@@ -2179,7 +2242,7 @@ REST_FRAMEWORK = {
 - 如果某个视图单独设置了 `permission_classes`，就会使用该视图指定的权限类，而不是把它与全局默认权限列表自动合并。换句话说，该视图指定的权限类的优先级高于全局默认权限。
 - 如果没有配置全局权限，DRF 默认通常使用 `AllowAny`。
 
-#### 8.6.5 四种方式对比
+### 8.6.5 四种方式对比
 
 | 配置方式 | 使用位置 | 示例 |
 |---|---|---|
@@ -2188,7 +2251,7 @@ REST_FRAMEWORK = {
 | 类属性 | `ViewSet` / `ModelViewSet` | `permission_classes = [IsAuthenticated]` |
 | 全局配置 | `settings.py` | `DEFAULT_PERMISSION_CLASSES` |
 
-### 8.7 自定义权限类
+## 8.7 自定义权限类
 
 当 DRF 自带的权限类无法满足需求时，可以继承 `BasePermission`，编写自己的权限规则。
 
@@ -2230,7 +2293,7 @@ class MyPermission(BasePermission):
 permission_classes = [MyPermission]
 ```
 
-#### BasePermission 的两个重要方法
+### BasePermission 的两个重要方法
 
 | 方法 | 作用 |
 |---|---|
@@ -2256,7 +2319,7 @@ class IsBookOwnerOrReadOnly(BasePermission):
 
 注意：示例假设 `Book` 模型具有 `owner` 字段。使用对象权限时，视图还必须正确获取对象并触发对象权限检查；仅定义这个方法，并不意味着所有列表数据都会自动逐条检查。
 
-### 8.8 SAFE_METHODS（安全 HTTP 方法）
+## 8.8 SAFE_METHODS（安全 HTTP 方法）
 
 `SAFE_METHODS` 是 DRF 在 `rest_framework.permissions` 中提供的常量。
 
@@ -2289,13 +2352,13 @@ if request.method in SAFE_METHODS:
 
 这表示：如果请求方法是 `GET`、`HEAD` 或 `OPTIONS`，就允许通过当前这条权限检查。
 
-### 8.9 APIException
+## 8.9 APIException
 
 `APIException` 是 DRF 异常体系的基础类，适合在 API 代码中抛出能够转换为 HTTP 响应的异常。
 
 例如，用户请求某项资源时，如果不符合业务规则，可以抛出相应异常，让 DRF 处理并生成错误响应。
 
-#### 8.9.1 自定义 APIException
+### 8.9.1 自定义 APIException
 
 如果项目有特定的业务错误，可以创建自己的异常类。
 
@@ -2330,7 +2393,7 @@ raise BookOutOfStock()
 raise BookOutOfStock("当前图书库存不足，无法购买")
 ```
 
-#### 8.9.2 Flutter 客户端如何获取异常信息
+### 8.9.2 Flutter 客户端如何获取异常信息
 
 当 Django REST Framework 视图抛出 `APIException` 时，DRF 会将异常转换成 HTTP 响应。
 
