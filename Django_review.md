@@ -692,7 +692,7 @@ from django.contrib import admin  # 导入 admin 模块
 from .models import 模型1, 模型2, 模型3 # 导入当前 app 中的模型
 ```
 
-### 4.2 注册模型
+## 4.2 注册模型
 ```python
 @admin.register(模型1) # 将模型注册到后台管理站点
 class 模型1Admin(admin.ModelAdmin): # 继承 admin.ModelAdmin
@@ -747,7 +747,7 @@ class 类视图(APIView):
 
 收到 GET 请求时执行 `get()`；收到 POST 请求时执行 `post()`；收到 PUT 请求时执行 `put()`；收到 PATCH 请求时执行 `patch()`；收到 DELETE 请求时执行 `delete()`。
 
-#### 5.2.2 APIView 的 `Request` 对象和属性
+### 5.2.2 APIView 的 `Request` 对象和属性
 - `request`：DRF 的 `APIView` 会把请求包装成 DRF 的 `Request` 对象，常用属性如下。
 
 | 属性                     | 作用          | 示例                         |
@@ -877,7 +877,7 @@ class 模型ViewSet(viewsets.ModelViewSet):
 
 假设学生 API 的基础路径是 `/api/students/`：
 ```python
-from .models import 
+from .models import Student
 from .serializers import StudentSerializer
 from rest_framework import viewsets
 
@@ -1246,12 +1246,13 @@ Model.objects.order_by("-字段名")
 Model.objects.values("字段名").distinct()
 Model.objects.create()
 instance.save()
-Model.objects.update()
+Model.objects.filter().update()
 instance.delete()
 Model.objects.count()
-Model.objects.exists()
+Model.objects.filter().exists()
 instance, created = Model.objects.get_or_create()
 instance, created = Model.objects.update_or_create()
+
 
 # 细说查询条件
 
@@ -2006,11 +2007,12 @@ print(serializer.data)
 
 此时，`serializer.data` 返回的是包含多本图书数据的列表。
 
+
 ## 7.6 在 views.py 中使用序列化器
 
-实际项目中，可以在视图中查询数据，再交给序列化器处理，最后返回 API 响应。
+### 7.6.1 FBV 中使用序列化器
 
-示例：
+使用 `@api_view` 装饰器，将普通 Python 函数转换为 DRF API 视图。
 
 ```python
 from rest_framework.decorators import api_view
@@ -2021,17 +2023,85 @@ from .serializers import BookSerializer
 
 @api_view(["GET"])
 def book_list(request):
-    # 从数据库查询所有图书
     books = Book.objects.all()
-
-    # 将查询集转换为序列化数据
     serializer = BookSerializer(books, many=True)
-
-    # 返回 API 响应，DRF 会将数据渲染为 JSON 等格式
     return Response(serializer.data)
 ```
 
-这个视图只负责查询和输出数据，不涉及反序列化。
+特点：
+
+- 使用函数定义视图。
+- 需要手动查询数据、调用序列化器和返回响应。
+- 适合简单、灵活的 API 接口。
+
+### 7.6.2 APIView 中使用序列化器
+
+使用 `APIView` 编写类视图，通过 `get()`、`post()` 等方法处理不同的 HTTP 请求。
+
+```python
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .models import Book
+from .serializers import BookSerializer
+
+
+class BookListView(APIView):
+
+    def get(self, request):
+        books = Book.objects.all()
+        serializer = BookSerializer(books, many=True)
+        return Response(serializer.data)
+```
+
+特点：
+
+- 使用类定义视图。
+- 不同请求方法可以写在不同的方法中。
+- 查询数据、调用序列化器、返回响应，通常仍然需要自己编写。
+
+例如，后续可以增加 `post()` 方法，实现创建图书的功能。
+
+### 7.6.3 ModelViewSet 中使用序列化器
+
+如果使用 `ModelViewSet`，DRF 可以自动提供常见的增删改查操作。
+
+```python
+from rest_framework.viewsets import ModelViewSet
+from .models import Book
+from .serializers import BookSerializer
+
+
+class BookViewSet(ModelViewSet):
+    queryset = Book.objects.all()
+    serializer_class = BookSerializer
+```
+
+只需要配置 `queryset` 和 `serializer_class`，DRF 就可以根据路由和 HTTP 请求，执行相应的操作。
+
+默认包含以下操作：
+
+| HTTP 方法 | 操作   | 默认行为               |
+| ------- | ---- | ------------------ |
+| GET     | 查询列表 | `list()`           |
+| GET     | 查询单条 | `retrieve()`       |
+| POST    | 创建   | `create()`         |
+| PUT     | 完整更新 | `update()`         |
+| PATCH   | 部分更新 | `partial_update()` |
+| DELETE  | 删除   | `destroy()`        |
+
+这里的 `BookSerializer` 负责数据的序列化和反序列化，而 `ModelViewSet` 帮你组织常见的 CRUD 逻辑。
+
+注意：`ModelViewSet` 还需要通过路由注册才能生成对应的 URL，例如：
+
+```python
+from rest_framework.routers import DefaultRouter
+from .views import BookViewSet
+
+router = DefaultRouter()
+router.register("books", BookViewSet, basename="book")
+
+urlpatterns = router.urls
+```
 
 # 8. authentications.py 和 permissions.py
 
@@ -2258,7 +2328,7 @@ class LoginView(APIView):
     "username": "test"
 }
 ```
-#### 8.2.5.4 客户端存储 access_token 
+#### 8.2.5.4 客户端存储 `access_token` 
 客户端将 `access_token` 存储于设备上，下次发起 API 请求时，在请求头加入：
 
 ```http
@@ -2734,3 +2804,57 @@ if (response.statusCode >= 400) {
 - `response.body`：服务端返回的响应内容。
 - `jsonDecode(response.body)`：将 JSON 字符串转换为 Dart 对象。
 - `data['detail']`：提取 DRF 返回的异常提示。
+
+# 9. 常用导入模块一览表
+
+```python
+# models.py
+from django.db import models
+
+
+# admin.py
+from django.contrib import admin
+
+
+# views.py
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status, viewsets
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.decorators import (
+    api_view,
+    action,
+    authentication_classes,
+    permission_classes,
+)
+from rest_framework.permissions import (
+    AllowAny,
+    IsAuthenticated,
+    IsAdminUser,
+    IsAuthenticatedOrReadOnly,
+)
+
+
+# views.py - 登录视图
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
+
+
+# serializers.py
+from rest_framework import serializers
+
+
+# urls.py
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+
+
+# settings.py
+from datetime import timedelta
+
+
+# Auth
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.permissions import BasePermission, SAFE_METHODS
+from rest_framework.exceptions import AuthenticationFailed, APIException
+```
