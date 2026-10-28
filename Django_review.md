@@ -2088,7 +2088,7 @@ Permission --> 你有权做什么？
 
 JWT 是 JSON Web Token 的缩写，常用于 Web API 的用户身份认证。
 
-#### 8.2.1 第一步：安装依赖
+### 8.2.1 第一步：安装依赖
 
 在终端执行：
 
@@ -2187,6 +2187,83 @@ def my_profile(request):
 这里的 `IsAuthenticated` 表示只有已认证用户才能访问。
 
 如果请求没有有效的认证信息，DRF 会根据认证方式和请求情况返回相应的认证错误响应。
+
+### 8.2.5 `access_token`
+
+#### 8.2.5.1 什么是 `access_token` ？
+
+- 身份凭证： 用于证明请求对应的用户身份。
+- 无需每次提交密码： 登录后，后续请求只需携带 Token。
+- 具有有效期： 过期后不能继续正常使用。
+- 需要妥善保管： Token 泄露后，其他人可能在其有效期内冒充用户发起请求。
+
+#### 8.2.5.2 设置 `access_token` 过期时间
+
+```python
+# settings.py
+
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=7), # 设置7天后过期
+}
+```
+#### 8.2.5.3 登录成功后，传回 `access_token`
+
+```python
+# views.py
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+from rest_framework import status
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
+
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        username = request.data.get("username")
+        password = request.data.get("password")
+        
+
+        user = authenticate(username=username, password=password)
+        if not user:
+            return Response(
+                {"error": "用户名或密码错误"}, status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        if not user.is_active:
+            return Response({"error": "账号已被封禁，请联系管理员"}, status=403)
+
+        # 将拿到的 user 对象传入 RefreshToken.for_user(user) 生成 token
+        token = RefreshToken.for_user(user)
+        access_token = str(token.access_token)
+
+        return Response(
+            {
+                "access_token": access_token, 
+                "username": username,
+            }
+        )
+
+        
+```
+登录成功后，客户端会收到类似这样的数据：
+
+```json
+{
+    "access_token": "eyJhbGciOiJIUzI1NiIs...",
+    "username": "test"
+}
+```
+#### 8.2.5.4 客户端存储 access_token 
+客户端将 `access_token` 存储于设备上，下次发起 API 请求时，在请求头加入：
+
+```http
+Authorization: Bearer access_token
+```
 
 ## 8.3 自定义认证类
 
