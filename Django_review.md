@@ -593,7 +593,7 @@ class Demo:
 ```
 你可以把 `self.` 理解成，给 Python 解释器加的导盲犬
 
-## 3.5 `IntegerChoices` / `TextChoices` 下拉枚举
+## 3.5 `choices` 下拉枚举
 作用：枚举选项，用于后台下拉选择
 - `IntegerChoices`：数据库存数字，搭配 `IntegerField`
 - `TextChoices`：数据库存字符串，搭配 `CharField`，必须写 `max_length`
@@ -603,18 +603,20 @@ from django.db import models
 
 # IntegerChoices：值是数字，适合用数字标记类型
 class Status(models.IntegerChoices):
-    DRAFT = 0, "草稿"  # 等号左边：代码常量；第一个值：存入数据库；第二个：后台显示文字
+    # 等号左边：代码常量；
+    # 等号右边：第一个值，存入数据库；第二个值，显示文字
+    DRAFT = 0, "草稿"
     PUB = 1, "发布"
+    RECYCLE = 2, "回收站"
 
 
 # TextChoices：值是字符串，适合简短标识
 class Type(models.TextChoices):
-    N = "n", "普通"  # 等号左边：代码常量；第一个值：存入数据库；第二个：后台显示文字
+    N = "n", "普通"
     F = "f", "比喻"
 
 
 class Article(models.Model):
-    # choices=Status.choices 把上面枚举绑定到字段；default 设置新建时默认值
     status = models.IntegerField(choices=Status.choices, default=Status.DRAFT)
     typ = models.CharField(max_length=1, choices=Type.choices, default=Type.N)
 ```
@@ -696,16 +698,169 @@ from .models import 模型1, 模型2, 模型3 # 导入当前 app 中的模型
 ```python
 @admin.register(模型1) # 将模型注册到后台管理站点
 class 模型1Admin(admin.ModelAdmin): # 继承 admin.ModelAdmin
-    list_display = ("字段1", "字段2", "字段3") # 显示
-    list_filter = ("字段4", "字段5") # 过滤
-    search_fields = ("字段6", "字段7") # 搜索
+    list_display = ["字段1", "字段2", "字段3"] # 显示
+    list_filter = ["字段4", "字段5"] # 过滤
+    search_fields = ["字段6", "字段7"] # 搜索
 
 @admin.register(模型2)
 class 模型2Admin(admin.ModelAdmin):
-    list_display = ("字段1", "字段2")
-    list_filter = ("字段3")
-    search_fields = ("字段4")
+    list_display = ["字段1", "字段2"]
+    list_filter = ["字段3"]
+    search_fields = ["字段4"]
 ```
+
+## 4.3 get_FOO_display()
+
+在 Django 中，**如果模型字段使用了 `choices`**，Django 会自动提供一个 `get_FOO_display()` 方法，用来获取该字段对应的显示文字。
+
+这里的 `FOO` 代表模型中的字段名称。
+
+### 4.3.1 基本用法
+
+以 `Article` 模型为例：
+
+```python
+from django.db import models
+
+
+# IntegerChoices：值是数字
+class Status(models.IntegerChoices):
+    # 等号左边：代码常量；
+    # 等号右边：第一个值，存入数据库；第二个值，显示文字
+    DRAFT = 0, "草稿"
+    PUB = 1, "发布"
+    RECYCLE = 2, "回收站"
+
+
+# TextChoices：值是字符串
+class Type(models.TextChoices):
+    N = "n", "普通"
+    F = "f", "比喻"
+
+
+class Article(models.Model):
+    status = models.IntegerField(
+        choices=Status.choices,
+        default=Status.DRAFT
+    )
+
+    typ = models.CharField(
+        max_length=1,
+        choices=Type.choices,
+        default=Type.N
+    )
+```
+
+Django 会自动提供以下两个方法：
+
+```python
+obj.get_status_display()  # 获取 status 字段的显示文字
+obj.get_typ_display()     # 获取 typ 字段的显示文字
+```
+
+注意：`obj` 代表一条 Article 模型记录。
+
+假设数据库中有一条文章记录：
+
+```python
+article = Article.objects.first()
+```
+
+这条记录存储于数据库中的字段值为：
+
+```python
+article.status  # 0
+article.typ     # "n"
+```
+
+如果使用 `get_FOO_display()`，则可获取该字段的显示文字：
+
+```python
+article.get_status_display()  # "草稿"
+article.get_typ_display()     # "普通"
+```
+
+两者的区别：
+
+| 获取方式                           | 返回结果   | 说明       |
+| ------------------------------ | ------ | -------- |
+| `article.status`               | `0`    | 数据库实际存储值 |
+| `article.get_status_display()` | `"草稿"` | 对应的显示文字  |
+| `article.typ`                  | `"n"`  | 数据库实际存储值 |
+| `article.get_typ_display()`    | `"普通"` | 对应的显示文字  |
+
+### 4.3.2 在 admin.py 中使用
+
+例如，我们希望 Django Admin 后台文章列表显示中文状态和类型，而不是数字和字母。
+
+可以这样写：
+
+```python
+from django.contrib import admin
+from .models import Article
+
+
+@admin.register(Article)
+class ArticleAdmin(admin.ModelAdmin):
+
+    list_display = [
+        "id",
+        "get_status_display", # ⚠️注意：不需要加()
+        "get_typ_display", # ⚠️注意：不需要加()
+    ]
+
+```
+
+还可以这样写：
+
+```python
+from django.contrib import admin
+from .models import Article
+
+
+@admin.register(Article)
+class ArticleAdmin(admin.ModelAdmin):
+
+    list_display = [
+        "id",
+        "status_display",
+        "typ_display",
+    ]
+
+    @admin.display(description="文章状态") # 这是 Django Admin 提供的装饰器，用来自定义列的标题
+    # 如果不写这个装饰器的话，列的标题默认显示为 Status display
+    def status_display(self, obj):
+        return obj.get_status_display()
+
+
+    @admin.display(description="文章类型")
+    # 如果不写这个装饰器的话，列的标题默认显示为 Typ display
+    def typ_display(self, obj):
+        return obj.get_typ_display()
+```
+
+### 4.3.3 不局限于 admin.py
+
+它是 Django 模型实例自动提供的方法，并不是 Django Admin 专属功能。
+
+因此，在视图函数、业务代码、Django Shell 等地方也可以使用：
+
+```python
+article = Article.objects.get(id=1)
+
+print(article.get_status_display())
+print(article.get_typ_display())
+```
+
+### 4.3.4 知识点总结
+
+| 知识点                                 | 作用                   |
+| ----------------------------------- | -------------------- |
+| `obj.FOO`                 | 获取 choices 字段存储于数据库中的值 |
+| `obj.get_FOO_display()`                 | 获取 choices 字段对应的显示文字 |
+| `@admin.display(description="...")` | 自定义列的标题            |
+
+注意： `get_FOO_display()` 是 Django 自动提供的，不需要自己在 `models.py` 中定义。只要字段设置了 `choices`，就可以使用。
 
 # 5. views.py
 视图常见的编写方式有两种：
@@ -1191,7 +1346,96 @@ student, created = Student.objects.update_or_create(
     },
 )
 ```
-### 5.4.10 批量操作
+### 5.4.10 跨表查询
+
+Django ORM 使用双下划线 `__` 实现跨表查询，可以通过模型之间的关联关系，访问其他模型的字段。
+
+例如：
+
+```python
+class Author(models.Model):
+    name = models.CharField(max_length=50)
+
+
+class Article(models.Model):
+    title = models.CharField(max_length=100)
+    author = models.ForeignKey(Author, on_delete=models.CASCADE)
+```
+
+**① 基本用法**
+
+```python
+# 查询作者姓名为张三的文章
+Article.objects.filter(author__name="张三")
+```
+
+其中：
+- `author`：Article 模型中的外键字段。
+- `name`：Author 模型中的字段。
+- `__`：连接两个字段，跨越模型关系。
+
+**② 连续跨表查询**
+
+```python
+# 假设 Author 还有一个关联 Department 的外键
+Article.objects.filter(author__department__name="研发部")
+```
+
+可以连续使用双下划线，跨越多个模型关系。
+
+**③ 也可反向查询**
+
+双下划线 `__` 不仅可以通过外键正向查询关联模型的字段，也可以通过 `related_name` 反向查询。
+
+例如：
+
+```python
+class Author(models.Model):
+    name = models.CharField(max_length=50)
+
+
+class Article(models.Model):
+    title = models.CharField(max_length=100)
+    author = models.ForeignKey(
+        Author,
+        on_delete=models.CASCADE,
+        related_name="articles"
+    )
+
+```
+查询发表过 Django 相关文章的作者：
+
+```python
+Author.objects.filter(articles__title__icontains="Django")
+```
+
+其中：
+
+- `articles`：`related_name` 设置的反向关联名称。
+- `title`：Article 模型中的字段。
+- `icontains`：不区分大小写的包含查询。
+
+
+**④ 在 admin.py 中使用**
+
+双下划线也可以用于 `search_fields`，实现跨表搜索。
+
+```python
+@admin.register(Article)
+class ArticleAdmin(admin.ModelAdmin):
+
+    search_fields = [
+        "title",
+        "author__name",  # 搜索关联作者的姓名
+    ]
+```
+
+**知识点总结：**
+- `author__name`：跨表访问关联模型的字段。
+- `author__department__name`：连续跨越多个模型关系。
+- `articles__title__icontains`：可反向查询。
+
+### 5.4.11 批量操作
 ```python
 # 批量创建：一次提交多个模型对象
 Student.objects.bulk_create([
@@ -1208,7 +1452,7 @@ for student in students:
 # 将修改后的多个对象批量更新到数据库
 Student.objects.bulk_update(students, ["age"])
 ```
-### 5.4.11 常见使用原则
+### 5.4.12 常见使用原则
 ```python
 # filter()：返回 QuerySet，适合查多条或零条数据
 students = Student.objects.filter(age__gte=18)
@@ -1229,7 +1473,7 @@ updated_count = Student.objects.filter(age=20).update(age=21)
 # delete()：删除符合条件的记录，返回删除统计信息
 # deleted_count, details = Student.objects.filter(age=100).delete()
 ```
-### 5.4.12 总结
+### 5.4.13 总结
 ```python
 # 常用指令
 
@@ -1267,6 +1511,7 @@ Model.objects.filter(字段名__icontains="字符串包含，通常不区分大�
 Model.objects.filter(字段名__startswith="以指定内容开头")
 Model.objects.filter(字段名__endswith="以指定内容结尾")
 Model.objects.filter(字段名__isnull=True) # 查询字段为 NULL 的
+Model.objects.filter(模型1的字段名__模型2的字段名="可连续跨表查询、可反向查询")
 ```
 
 ## 5.5 @api_view([])
