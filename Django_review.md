@@ -699,14 +699,14 @@ from .models import 模型1, 模型2, 模型3 # 导入当前 app 中的模型
 @admin.register(模型1) # 将模型注册到后台管理站点
 class 模型1Admin(admin.ModelAdmin): # 继承 admin.ModelAdmin
     list_display = ["字段1", "字段2", "字段3"] # 显示
-    list_filter = ["字段4", "字段5"] # 过滤
-    search_fields = ["字段6", "字段7"] # 搜索
+    search_fields = ["字段4", "字段5"] # 搜索
+    list_filter = ["字段6", "字段7"] # 过滤，常填入设置了 choices 的字段
 
 @admin.register(模型2)
 class 模型2Admin(admin.ModelAdmin):
     list_display = ["字段1", "字段2"]
-    list_filter = ["字段3"]
-    search_fields = ["字段4"]
+    search_fields = ["字段3"]
+    list_filter = ["字段4"]
 ```
 
 ## 4.3 get_FOO_display()
