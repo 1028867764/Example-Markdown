@@ -1009,9 +1009,9 @@ class TestView(APIView):
 ```python
 from .models import 模型
 from .serializers import 模型Serializer
-from rest_framework import viewsets
+from rest_framework.viewsets import ModelViewSet
 
-class 模型ViewSet(viewsets.ModelViewSet):
+class 模型ViewSet(ModelViewSet):
     # 1. 指定数据源
     queryset = 模型.objects.all()
 
@@ -1034,9 +1034,9 @@ class 模型ViewSet(viewsets.ModelViewSet):
 ```python
 from .models import Student
 from .serializers import StudentSerializer
-from rest_framework import viewsets
+from rest_framework.viewsets import ModelViewSet
 
-class StudentViewSet(viewsets.ModelViewSet):
+class StudentViewSet(ModelViewSet):
     # 1. 指定数据源
     queryset = Student.objects.all()
 
@@ -1058,12 +1058,12 @@ class StudentViewSet(viewsets.ModelViewSet):
 ### 5.3.3 重写 ModelViewSet 自带的 CRUD 逻辑
 - 基本模板
 ```python
-from rest_framework import viewsets
+from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 from .models import Student
 from .serializers import StudentSerializer
 
-class StudentViewSet(viewsets.ModelViewSet):
+class StudentViewSet(ModelViewSet):
     # ===== 基础配置 =====
     queryset = Student.objects.all()
     serializer_class = StudentSerializer
@@ -1110,31 +1110,31 @@ class StudentViewSet(viewsets.ModelViewSet):
 ```python
 # serializers.py
 
-from rest_framework import serializers
+from rest_framework.serializers import ModelSerializer
 from .models import Student
 
 
 # 查询列表时使用：只返回姓名和年龄
-class StudentListSerializer(serializers.ModelSerializer):
+class StudentListSerializer(ModelSerializer):
     class Meta:
         model = Student
         fields = ["id", "name", "age"]
 
 
 # 创建或查询单条数据时使用：返回所有字段
-class StudentSerializer(serializers.ModelSerializer):
+class StudentSerializer(ModelSerializer):
     class Meta:
         model = Student
         fields = "__all__"
 ```
 在 `views.py` 中：
 ```python
-from rest_framework import viewsets
+from rest_framework.viewsets import ModelViewSet
 from .models import Student
 from .serializers import StudentSerializer, StudentListSerializer
 
 
-class StudentViewSet(viewsets.ModelViewSet):
+class StudentViewSet(ModelViewSet):
     queryset = Student.objects.all()
     serializer_class = StudentSerializer
 
@@ -1168,12 +1168,12 @@ class Student(models.Model):
 ```
 在 `views.py` 中：
 ```python
-from rest_framework import viewsets
+from rest_framework.viewsets import ModelViewSet
 from .models import Student
 from .serializers import StudentSerializer
 
 
-class StudentViewSet(viewsets.ModelViewSet):
+class StudentViewSet(ModelViewSet):
     queryset = Student.objects.all()
     serializer_class = StudentSerializer
 
@@ -1648,7 +1648,7 @@ serializer = StudentSerializer(students, many=True)
 
 ### 5.6.2 基础语法
 ```python
-from rest_framework import viewsets
+from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -1656,7 +1656,7 @@ from .models import Student
 from .serializers import StudentSerializer
 
 
-class StudentViewSet(viewsets.ModelViewSet):
+class StudentViewSet(ModelViewSet):
 
     # 标准 CRUD 的基础配置
     queryset = Student.objects.all()
@@ -1766,9 +1766,9 @@ REST_FRAMEWORK = {
 
 ```python
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import viewsets
+from rest_framework.viewsets import ModelViewSet
 
-class StudentViewSet(viewsets.ModelViewSet):
+class StudentViewSet(ModelViewSet):
     queryset = Student.objects.all()
     serializer_class = StudentSerializer
 
@@ -1808,14 +1808,14 @@ class Student(models.Model):
 | 5  | 七妹   | 16  | 女      | 香港   |
 #### 5.7.3.2 编写视图 `views.py`
 ```python
-from rest_framework import viewsets
+from rest_framework.viewsets import ModelViewSet
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import Student
 from .serializers import StudentSerializer
 
 
-class StudentViewSet(viewsets.ModelViewSet):
+class StudentViewSet(ModelViewSet):
     # 设置基础查询集
     queryset = Student.objects.all()
 
@@ -1865,7 +1865,7 @@ filterset_fields = ["name", "age", "gender", "city"]
 `filterset_fields` 的简单列表写法主要提供字段的精确匹配。如果需要年龄大于等于某个值，或者小于某个值，就可以使用字典写法指定过滤查找类型。
 
 ```python
-class StudentViewSet(viewsets.ModelViewSet):
+class StudentViewSet(ModelViewSet):
     queryset = Student.objects.all()
     serializer_class = StudentSerializer
 
@@ -1923,6 +1923,123 @@ Student.objects.filter(name__icontains="张")
 
 注意： 这里的 `filterset_fields` 字典是在声明允许使用的过滤方法，不是让你直接填写过滤值。具体值由请求 URL 传入。
 
+## 5.8 数据解析器【选学】
+
+### 5.8.1 什么是数据解析器
+
+在 Django REST Framework（DRF）中，数据解析器（Parser）用于解析客户端发送的请求数据，将请求体（Request Body）中的原始数据转换为 Python 可以处理的数据。
+
+例如，Flutter 客户端向 Django 后端发送 POST 请求时，可能使用不同的数据格式：
+
+- JSON：`application/json`
+- 文件上传：`multipart/form-data`
+- 普通表单：`application/x-www-form-urlencoded`
+
+**DRF 内置了默认的数据解析器，会根据客户端请求头中的 `Content-Type` 自动选择合适的解析器。**
+
+常见的解析器：
+
+| 解析器 | 作用 | 对应 Content-Type |
+|---|---|---|
+| `JSONParser` | 解析 JSON 数据 | `application/json` |
+| `MultiPartParser` | 解析表单数据和文件上传 | `multipart/form-data` |
+| `FormParser` | 解析普通表单数据 | `application/x-www-form-urlencoded` |
+
+对于 Flutter + DRF 前后端分离项目，主要使用前两种即可，`FormParser` 一般不需要特别关注。
+
+### 5.8.2 默认解析器
+
+DRF 默认已经配置好了以下解析器：
+
+```python
+REST_FRAMEWORK = {
+
+    "DEFAULT_PARSER_CLASSES": [
+        "rest_framework.parsers.JSONParser",
+        "rest_framework.parsers.FormParser",
+        "rest_framework.parsers.MultiPartParser",
+    ],
+
+}
+```
+
+**注意：以上是 DRF 内置的默认配置，不需要自己在 `settings.py` 中重复编写。**
+
+因此，通常不需要在 `APIView` 或 `ModelViewSet` 中额外配置 `parser_classes`，DRF 就能自动处理客户端提交的 JSON 数据和文件上传请求。
+
+例如：
+
+```python
+def post(self, request):
+
+    # 获取客户端提交的数据
+    username = request.data.get("username")
+
+    # 获取客户端上传的文件
+    avatar = request.FILES.get("avatar")
+```
+
+### 5.8.3 限制解析器
+
+一般情况下不需要配置解析器。
+
+但如果某个接口只允许接收特定格式的数据，可以使用 `parser_classes` 限制允许使用的解析器。
+
+例如：某个接口只允许接收 JSON 数据，不允许客户端使用 `multipart/form-data` 上传文件。
+
+**CBV（APIView）示例：**
+
+```python
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.parsers import JSONParser
+
+
+class UserView(APIView):
+
+    # 当前接口只允许接收 JSON 数据
+    parser_classes = [JSONParser]
+
+    def post(self, request):
+
+        username = request.data.get("username")
+
+        return Response({
+            "username": username
+        })
+```
+
+**FBV（函数视图）示例：**
+
+```python
+from rest_framework.decorators import api_view, parser_classes
+from rest_framework.parsers import JSONParser
+from rest_framework.response import Response
+
+
+@api_view(["POST"])
+@parser_classes([JSONParser])
+def user_create(request):
+
+    username = request.data.get("username")
+
+    return Response({
+        "username": username
+    })
+```
+
+如果客户端使用不允许的请求格式，例如向上面的接口发送 `multipart/form-data`，DRF 会返回 `415 Unsupported Media Type`（不支持的媒体类型）。
+
+### 5.8.4 学习总结
+
+关于数据解析器，只需要记住以下几点：
+
+1. Parser（数据解析器）负责将客户端发送的数据转换为 Python 数据。
+2. DRF 内置默认解析器，会根据请求头 `Content-Type` 自动选择合适的解析器。
+3. `request.data` 用于获取解析后的请求数据。
+4. `request.FILES` 用于获取上传的文件。
+5. 一般不需要手动配置 `parser_classes`，只有需要限制接口允许接收的数据格式时才需要配置。
+
 # 6. urls.py
 ## 6.1 `urls.py` 是什么？
 
@@ -1966,6 +2083,7 @@ urlpatterns = [ # Django 默认识别的路由列表
     path("api/", include("students.urls")), # 把 students 应用的 urls.py 中的路由挂载到 /api/ 前缀下
 ]
 ```
+> include() 函数挂载路由前缀
 
 ## 6.4 App 路由
 
@@ -2039,16 +2157,17 @@ path("students/", views.student_list())
 from rest_framework.routers import DefaultRouter
 
 # 2. 导入当前 App 中的视图集
-from .views import BookViewSet
+from .views import BookViewSet, OtherViewSet
 
 # 3. 创建路由器对象
 router = DefaultRouter()
 
 # 4. 注册视图集
-# "books" 是 URL 前缀
-# BookViewSet 是负责处理请求的视图集
+# "books", "others" 是 URL 前缀
+# BookViewSet, OtherViewSet 是负责处理请求的视图集
 # basename 是生成路由名称时使用的基础名称
 router.register("books", BookViewSet, basename="book")
+router.register("others", OtherViewSet, basename="other")
 
 # 5. 将路由器自动生成的路由加入 urlpatterns
 # *router.urls 表示把 router.urls 中的路由逐项展开
@@ -2132,6 +2251,16 @@ book.price = 299
 **记忆小窍门：**
 
 ```text
+JSON 格式数据 <————> 序列化器 <————> Django 模型对象
+
+
+序列化：json <———— 模型对象
+反序列化：json ————> 模型对象
+```
+
+严格来说，`ModelSerializer` 负责将模型对象转换为基本数据类型，之后由 DRF 的 Renderer 将数据渲染为 JSON 等格式。
+
+```text
 数据库中的模型对象
         |
         v
@@ -2143,8 +2272,6 @@ DRF 将数据渲染为 JSON 格式
         v
 返回客户端
 ```
-
-严格来说，`ModelSerializer` 负责将模型数据转换为基本数据类型，之后由 DRF 的 Renderer 将数据渲染为 JSON 等格式。
 
 ## 7.2 准备 Django 模型
 
@@ -2188,11 +2315,11 @@ python manage.py migrate
 文件：`serializers.py`
 
 ```python
-from rest_framework import serializers
+from rest_framework.serializers import ModelSerializer
 from .models import Book
 
 
-class BookSerializer(serializers.ModelSerializer):
+class BookSerializer(ModelSerializer):
 
     # 序列化器的元配置
     class Meta:
@@ -2252,10 +2379,106 @@ print(serializer.data)
 
 此时，`serializer.data` 返回的是包含多本图书数据的列表。
 
+## 7.6 反序列化
 
-## 7.6 在 views.py 中使用序列化器
+### 7.6.1 基本用法
 
-### 7.6.1 FBV 中使用序列化器
+将 Json 数据反序列化为 Django 模型对象
+
+```python
+# 示例：将客户端提交的 JSON 数据保存到数据库
+
+from rest_framework import serializers
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from django.db import models
+
+
+# ==================== models.py ====================
+
+class Book(models.Model):
+    title = models.CharField(max_length=100)
+    author = models.CharField(max_length=50)
+
+
+# ==================== serializers.py ====================
+
+class BookSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Book
+        fields = "__all__"
+
+
+# ==================== views.py ====================
+
+class BookCreateView(APIView):
+
+    def post(self, request):
+
+        # 1. 接收客户端提交的 JSON 数据
+        serializer = BookSerializer(data=request.data)
+
+        # 2. 验证数据
+        if serializer.is_valid():
+
+            # 3. 反序列化并保存到数据库
+            # 自动调用 create() 方法，创建 Book 模型对象
+            serializer.save()
+
+            # 4. 返回序列化后的数据
+            return Response(
+                serializer.data,
+                status=status.HTTP_201_CREATED
+            )
+
+        # 验证失败，返回错误信息
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )
+```
+
+核心知识点：
+
+- `BookSerializer(data=request.data)`：将客户端提交的数据交给序列化器。
+- `serializer.is_valid()`：验证提交的数据。
+- `serializer.save()`：将验证后的数据转换为模型对象并保存到数据库。
+- `serializer.data`：获取序列化后的数据。
+- `serializer.save()` 根据是否传入已有模型对象，自动选择创建（`create()`）或更新（`update()`）操作。
+
+### 7.6.2 额外参数
+`serializer.save()` 可以传入额外参数
+
+```python
+# 方式一：不传参数，直接保存客户端提交的数据
+serializer.save()
+
+# 方式二：传入额外参数
+serializer.save(author="张三")
+```
+
+传入的参数会合并到序列化器验证后的数据中，并在保存时使用。
+
+例如，客户端只提交书名，作者由后端指定：
+
+```python
+# 客户端提交：
+# {"title": "Python 入门"}
+
+serializer = BookSerializer(data=request.data)
+
+if serializer.is_valid():
+    # 后端指定 author，不需要客户端提交
+    serializer.save(author="张三")
+```
+
+注意： `serializer.save(author="张三")` 中传入的参数会覆盖客户端提交的同名字段。对于 `ModelSerializer`，最终会通过 `create()` 或 `update()` 保存数据。
+
+## 7.7 在 views.py 中使用序列化器
+
+### 7.7.1 FBV 中使用序列化器
 
 使用 `@api_view` 装饰器，将普通 Python 函数转换为 DRF API 视图。
 
@@ -2279,7 +2502,7 @@ def book_list(request):
 - 需要手动查询数据、调用序列化器和返回响应。
 - 适合简单、灵活的 API 接口。
 
-### 7.6.2 APIView 中使用序列化器
+### 7.7.2 APIView 中使用序列化器
 
 使用 `APIView` 编写类视图，通过 `get()`、`post()` 等方法处理不同的 HTTP 请求。
 
@@ -2306,7 +2529,7 @@ class BookListView(APIView):
 
 例如，后续可以增加 `post()` 方法，实现创建图书的功能。
 
-### 7.6.3 ModelViewSet 中使用序列化器
+### 7.7.3 ModelViewSet 中使用序列化器
 
 如果使用 `ModelViewSet`，DRF 可以自动提供常见的增删改查操作。
 
@@ -2413,7 +2636,7 @@ pip install djangorestframework-simplejwt
 
 ### 8.2.2 第二步：配置认证方式
 
-DRF 可以在 `settings.py` 中全局配置认证方式，也可以在视图中通过 `authentication_classes` 属性单独配置。
+DRF 可以在 `settings.py` 中全局配置认证方式，也可以在视图中通过 `authentication_classes` 属性单独配置。**我推荐优先使用全局配置。**
 
 **方式一：全局配置（`settings.py`）**
 
@@ -3064,11 +3287,18 @@ from django.contrib import admin
 # views.py
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status, viewsets
+from rest_framework import status
+from rest_framework.viewsets import ModelViewSet
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.parsers import (
+    JSONParser,
+    MultiPartParser,
+    FormParser
+)
 from rest_framework.decorators import (
     api_view,
     action,
+    parser_classes,
     authentication_classes,
     permission_classes,
 )
@@ -3086,7 +3316,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 
 # serializers.py
-from rest_framework import serializers
+from rest_framework.serializers import ModelSerializer
 
 
 # urls.py
