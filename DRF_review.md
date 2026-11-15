@@ -3,17 +3,23 @@
 
 ## 1.1 创建 Django 项目
 
-在创建项目之前，需要先安装 Django。
-
-**第一步：安装 Django**
+**第一步：安装 Django 和 DRF**
 
 ```bash
 # 安装 Django
 pip install django
 
+# 安装 Django REST framework（DRF）
+pip install djangorestframework
+
 # 查看 Django 版本，确认安装成功
 python -m django --version
 ```
+
+补充说明：
+
+- `django`：Django 框架，用于开发 Web 后端。
+- `djangorestframework`：DRF 框架，是基于 Django 扩展的 RESTful API 开发工具包。
 
 **第二步：创建 Django 项目**
 
@@ -44,14 +50,33 @@ myproject/
 - `wsgi.py`：WSGI 应用入口。
 - `__init__.py`：标记该目录为 Python 包。
 
-**第三步：进入项目目录**
+**第三步：注册 DRF**
+
+在项目的 `settings.py` 中注册：
+
+```python
+INSTALLED_APPS = [
+    # Django 默认应用
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+
+    # 第三方应用
+    'rest_framework',
+]
+```
+
+**第四步：进入项目目录**
 
 ```bash
 # 进入包含 manage.py 的项目目录
 cd myproject
 ```
 
-**第四步：启动开发服务器**
+**第五步：启动开发服务器**
 
 ```bash
 python manage.py runserver
@@ -157,7 +182,7 @@ INSTALLED_APPS = [
 └── media/                  用户上传文件（图片、附件，可选）
 ```
 
-## 1.5 虚拟环境
+## 1.5 虚拟环境【选学】
 
 实际开发时，建议为每个 Python 项目创建独立的虚拟环境，用于安装和管理项目所需的依赖包。
 
@@ -367,7 +392,7 @@ D:\DjangoProject\.venv\Scripts\python.exe
 | 激活虚拟环境（PowerShell） | `.\.venv\Scripts\Activate.ps1` |
 | 安装 Django | `python -m pip install django` |
 
-对于初学者，建议养成一个习惯：**进入项目目录 → 激活虚拟环境 → 安装依赖 → 开发和运行项目。**（但是我喜欢偷懒，一般来说，某个项目很重要的话，我才会先激活虚拟环境再进行开发或运行项目，**其余的不重要的项目我都懒得激活虚拟环境**）
+对于初学者，建议养成一个习惯：**进入项目目录 → 激活虚拟环境 → 安装依赖 → 开发和运行项目。**（但是我喜欢偷懒，一般来说，某个项目很重要的话，我才会先激活虚拟环境再进行开发或运行项目，**其余的不重要的项目我都懒得激活虚拟环境）**
 
 # 2. settings.py
 （略，不懂的问 AI ）
@@ -557,10 +582,20 @@ w2.synonym.all()  # 拿到 [w1] ✅ 直接同样写法！
 👉 不管是 w1 还是 w2，都用 `.synonym`，没有别的反向名字。
 
 ## 3.3 `class Meta:` 模型的元配置
-- verbose_name = "模型的单数显示名称"
-- verbose_name_plural = "模型的复数显示名称"
-- ordering = ["-A","B"] 👉 负号为逆序
-- unique_together = ("A","B")
+```python
+class Book(models.Model):
+    title = models.CharField(max_length=100)
+    author = models.CharField(max_length=50)
+    sort = models.IntegerField(default=0)
+
+    class Meta:
+        verbose_name = "图书"               # 模型在后台显示的单数名称
+        verbose_name_plural = "图书管理"    # 模型在后台显示的复数名称
+
+        ordering = ["-sort", "title"]       # 默认排序：sort 降序，sort 相同时按 title 升序
+
+        unique_together = ["title", "author"]  # 联合唯一约束：title 和 author 的组合不能重复
+```
 
 ## 3.4 `def __str__(self):` 模型实例的“脸”
 可以把它记成：模型里每个单独实例的“脸”，方便在 print()、Django Admin 后台等地方识别这个实例
@@ -1110,19 +1145,19 @@ class StudentViewSet(ModelViewSet):
 ```python
 # serializers.py
 
-from rest_framework.serializers import ModelSerializer
+from rest_framework import serializers
 from .models import Student
 
 
 # 查询列表时使用：只返回姓名和年龄
-class StudentListSerializer(ModelSerializer):
+class StudentListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
         fields = ["id", "name", "age"]
 
 
 # 创建或查询单条数据时使用：返回所有字段
-class StudentSerializer(ModelSerializer):
+class StudentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
         fields = "__all__"
@@ -1630,7 +1665,7 @@ serializer = StudentSerializer(students, many=True)
 - `APIView`：类写接口。
 - `ModelViewSet`：快速构建标准增删改查接口。
 
-## 5.6 @action()
+## 5.6 额外业务功能
 ### 5.6.1 初识 @action()
 
 `@action()` 是 Django REST Framework（DRF）中用于 给 `ViewSet` 或 `ModelViewSet` **添加**自定义 API 接口的装饰器。
@@ -1683,7 +1718,7 @@ class StudentViewSet(ModelViewSet):
 ```
 假设原来 `StudentViewSet` 的基础路由是 `/api/students/`，只需要在这个基础路由后加上自定义的 `url_path`，即 `/api/students/adult-students/`，请求就会访问该 `@action()` ，并执行 `get_adults()` 方法。
 
-## 5.7 DjangoFilterBackend
+## 5.7 过滤后端
 
 ### 5.7.1 初识 DjangoFilterBackend
 
@@ -2163,7 +2198,7 @@ from .views import BookViewSet, OtherViewSet
 router = DefaultRouter()
 
 # 4. 注册视图集
-# "books", "others" 是 URL 前缀
+# "books", "others" 是 URL 前缀，末尾不需要加斜杠 /
 # BookViewSet, OtherViewSet 是负责处理请求的视图集
 # basename 是生成路由名称时使用的基础名称
 router.register("books", BookViewSet, basename="book")
@@ -2216,9 +2251,9 @@ router = DefaultRouter()
 router.register("路由地址", 视图集, basename="基础路由名称")
 
 urlpatterns = [
-path("路由地址", views.视图函数, name="路由名称"),
-path("路由地址 + 动态参数", views.视图函数, name="路由名称"),
-path("路由地址", views.视图类.as_view(), name="路由名称"),
+path("路由地址/", views.视图函数, name="路由名称"),
+path("路由地址/动态参数/", views.视图函数, name="路由名称"),
+path("路由地址/", views.视图类.as_view(), name="路由名称"),
 *router.urls,
 ]
 ```
@@ -2315,30 +2350,97 @@ python manage.py migrate
 文件：`serializers.py`
 
 ```python
-from rest_framework.serializers import ModelSerializer
+from rest_framework import serializers
 from .models import Book
 
 
-class BookSerializer(ModelSerializer):
+class BookSerializer(serializers.ModelSerializer):
 
     # 序列化器的元配置
     class Meta:
         # 指定当前序列化器对应的 Django 模型
         model = Book
 
-        # 输出全部字段（虽简洁，但不推荐）
+        # 输出和输入全部字段（虽简洁，但不推荐）
         # fields = "__all__"
 
-        # 明确指定需要输出的字段
+        # 明确指定需要输出和输入的字段
         fields = ["id", "title", "price", "stock"]
 
-        # 将 id 设置为只读字段
+        # 将 id 设置为只读字段，只输出，不接收客户端写入
         read_only_fields = ["id"]
 ```
 
-实际开发中，建议明确列出 `fields`，这样可以控制 API 输出内容，避免模型新增字段后意外暴露不需要的数据。
+后端返回：
 
-## 7.4 序列化单个模型对象
+```json
+{
+    "id": 1,
+    "title": "Python 入门",
+    "price": "39.90",
+    "stock": 100
+}
+```
+
+实际开发中，建议明确列出 `fields`，这样可以控制 API 输出和输入的内容，避免模型新增字段后意外暴露不需要的数据。
+
+**另外要注意：** 在 DRF 中，如果客户端提交了一个不在序列化器 `fields` 中的字段，默认情况下，DRF 会忽略这个字段，不会报错，也不会将它保存到数据库。
+
+例如：
+
+```python
+# serializers.py
+
+class BookSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Book
+        fields = ["title", "price"]
+```
+
+客户端提交：
+
+```json
+{
+    "title": "Python 入门",
+    "author": "张三",
+    "price": "39.90"
+}
+```
+
+这里的 `author` 不在 `fields` 中。
+
+执行：
+
+```python
+serializer = BookSerializer(data=request.data)
+
+print(serializer.is_valid())  # True
+print(serializer.validated_data)
+```
+
+结果：
+
+```json
+{
+    "title": "Python 入门",
+    "price": "39.90"
+}
+```
+
+可以看到：
+
+- `title`：正常接收。
+- `author`：被忽略，不会进入 `validated_data`。
+- `price`：正常接收。
+
+补充：
+
+如果你希望客户端提交了未定义的字段时直接报错，需要自己增加额外的检查逻辑，DRF 默认不会因为多余字段而判定验证失败。
+
+
+## 7.4 序列化
+
+### 7.4.1 序列化单个模型对象
 
 ```python
 # 查询一本图书
@@ -2362,7 +2464,7 @@ print(serializer.data)
 }
 ```
 
-## 7.5 序列化多个模型对象
+### 7.4.2 序列化多个模型对象
 
 如果需要输出多本图书，使用 `many=True`。
 
@@ -2379,9 +2481,233 @@ print(serializer.data)
 
 此时，`serializer.data` 返回的是包含多本图书数据的列表。
 
-## 7.6 反序列化
+### 7.4.3 默认返回的 JSON
 
-### 7.6.1 基本用法
+默认情况下，DRF 的 `ModelSerializer` 会根据模型字段名称，自动生成对应的 JSON 键名。
+
+例如，有一个 `Book` 模型：
+
+```python
+# models.py
+
+class Book(models.Model):
+    title = models.CharField(max_length=100)
+    author = models.CharField(max_length=50)
+    price = models.DecimalField(max_digits=6, decimal_places=2)
+```
+
+创建序列化器：
+
+```python
+# serializers.py
+
+from rest_framework import serializers
+from .models import Book
+
+class BookSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Book
+        fields = "__all__"  # 返回模型的所有字段
+```
+
+默认返回的 JSON：
+
+```json
+{
+    "id": 1,
+    "title": "Python 入门",
+    "author": "张三",
+    "price": "39.90"
+}
+```
+
+可以看到，JSON 的键名默认与模型字段名称一致。
+
+### 7.4.4 修改 JSON 键名
+
+如果希望返回给客户端的 JSON 使用其他键名，可以在序列化器中使用 `source` 参数。
+
+`source` 用于指定当前序列化器字段对应的模型字段，而序列化器字段名称则决定最终 JSON 中的键名。
+
+基本语法：
+
+```python
+自定义键名 = serializers.字段类型(source="模型字段名称")
+```
+
+例如：
+
+```python
+# serializers.py
+
+class BookSerializer(serializers.ModelSerializer):
+
+    book_name = serializers.CharField(source="title")
+    writer = serializers.CharField(source="author")
+
+    class Meta:
+        model = Book
+        fields = ["id", "book_name", "writer", "price"]
+        read_only_fields = ["id"]
+```
+
+返回的 JSON：
+
+```json
+{
+    "id": 1,
+    "book_name": "Python 入门",
+    "writer": "张三",
+    "price": "39.90"
+}
+```
+
+这里：
+
+- `book_name`：自定义的 JSON 键名。
+- `source="title"`：指定它对应模型中的 `title` 字段。
+- `writer`：自定义的 JSON 键名。
+- `source="author"`：指定它对应模型中的 `author` 字段。
+
+注意：
+
+`source` 不会修改数据库中的字段名称，只会改变序列化器字段与模型字段之间的对应关系。
+
+**补充：**
+
+`source` 同样会影响反序列化。当客户端提交 JSON 数据时，必须使用序列化器中定义的字段名称（自定义键名），而不是 `source` 指向的模型字段名称。
+
+例如，上面的序列化器：
+
+```python
+book_name = serializers.CharField(source="title")
+writer = serializers.CharField(source="author")
+```
+
+客户端应该提交：
+
+```json
+{
+    "book_name": "Python 入门",
+    "writer": "张三"
+}
+```
+
+而不是：
+
+```json
+{
+    "title": "Python 入门",
+    "author": "张三"
+}
+```
+
+DRF 会自动通过 `source` 将客户端提交的自定义键名映射到对应的模型字段。
+
+也就是说：
+
+- 客户端提交 `book_name`，DRF 将其映射到模型的 `title` 字段。
+- 客户端提交 `writer`，DRF 将其映射到模型的 `author` 字段。
+
+**记住：** 自定义序列化器字段名称后，客户端提交 JSON 时也要使用自定义后的字段名称。
+
+### 7.4.5 添加嵌套结构
+
+除了修改 JSON 键名，还可以使用 `source` 访问外键关联对象的字段，从而生成嵌套结构。
+
+例如，有两个模型：
+
+```python
+# models.py
+
+class Author(models.Model):
+    name = models.CharField(max_length=50)
+
+
+class Book(models.Model):
+    title = models.CharField(max_length=100)
+    author = models.ForeignKey(Author, on_delete=models.CASCADE)
+```
+
+希望返回的 JSON 中，图书的作者不再只是一个 ID，而是包含作者的详细信息。
+
+可以这样编写序列化器：
+
+```python
+# serializers.py
+
+class BookSerializer(serializers.ModelSerializer):
+
+    # 通过外键访问作者的 name 字段
+    # 格式：source="外键字段.关联字段"
+    author_name = serializers.CharField(source="author.name")
+
+    class Meta:
+        model = Book
+        fields = ["id", "title", "author_name"]
+```
+
+返回的 JSON：
+
+```json
+{
+    "id": 1,
+    "title": "Python 入门",
+    "author_name": "张三"
+}
+```
+
+还可以进一步使用 `source` 访问多层外键关联字段。
+
+例如：
+
+```python
+# 访问：图书 -> 作者 -> 所属出版社 -> 出版社名称
+
+publisher_name = serializers.CharField(
+    source="author.publisher.name"
+)
+```
+
+如果希望返回真正的嵌套 JSON 对象，而不是简单地把关联字段放在同一层，可以使用嵌套序列化器：
+
+```python
+# serializers.py
+
+class AuthorSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Author
+        fields = ["id", "name"]
+
+
+class BookSerializer(serializers.ModelSerializer):
+
+    # 将作者信息嵌套到 author 键中
+    author = AuthorSerializer(read_only=True)
+
+    class Meta:
+        model = Book
+        fields = ["id", "title", "author"]
+```
+
+返回的 JSON：
+
+```json
+{
+    "id": 1,
+    "title": "Python 入门",
+    "author": {
+        "id": 1,
+        "name": "张三"
+    }
+}
+```
+
+
+## 7.5 反序列化
+
+### 7.5.1 基本用法
 
 将 Json 数据反序列化为 Django 模型对象
 
@@ -2448,7 +2774,7 @@ class BookCreateView(APIView):
 - `serializer.data`：获取序列化后的数据。
 - `serializer.save()` 根据是否传入已有模型对象，自动选择创建（`create()`）或更新（`update()`）操作。
 
-### 7.6.2 额外参数
+### 7.5.2 额外参数
 `serializer.save()` 可以传入额外参数
 
 ```python
@@ -2476,9 +2802,61 @@ if serializer.is_valid():
 
 注意： `serializer.save(author="张三")` 中传入的参数会覆盖客户端提交的同名字段。对于 `ModelSerializer`，最终会通过 `create()` 或 `update()` 保存数据。
 
-## 7.7 在 views.py 中使用序列化器
+### 7.5.3 自动查询关联对象
 
-### 7.7.1 FBV 中使用序列化器
+假如客户端通过 POST 请求提交了如下 JSON 数据：
+
+```json
+{
+    "title": "Python 入门教程",
+    "author_id": 3
+}
+```
+
+其中 `author_id` 是一个外键 ID，而我们希望 DRF 根据这个 ID 自动查询对应的作者对象，并将其关联到图书模型，可以使用 `serializers.PrimaryKeyRelatedField`。
+
+示例代码：
+
+```python
+# models.py
+
+class Author(models.Model):
+    name = models.CharField(max_length=50)
+
+
+class Book(models.Model):
+    title = models.CharField(max_length=100)
+    author = models.ForeignKey(Author, on_delete=models.CASCADE)
+
+
+# serializers.py
+
+class BookSerializer(serializers.ModelSerializer):
+
+    # 接收 author_id，自动查询对应的 Author 对象
+    author_id = serializers.PrimaryKeyRelatedField(
+        queryset=Author.objects.all(),
+        source="author"
+    )
+
+    class Meta:
+        model = Book
+        fields = ["id", "title", "author_id"]
+```
+
+参数说明：
+
+- `queryset`：指定允许关联的对象范围，同时用于根据 ID 查询对象。
+- `source`：指定当前序列化器字段对应的模型字段。
+
+注意：
+
+- DRF 会自动根据 `author_id` 查询对应的 `Author` 对象，无须手动使用 `objects.get()`。
+- 如果传入的 ID 不存在，DRF 会返回验证错误。
+
+## 7.6 在 views.py 中使用序列化器
+
+### 7.6.1 FBV 中使用序列化器
 
 使用 `@api_view` 装饰器，将普通 Python 函数转换为 DRF API 视图。
 
@@ -2502,7 +2880,7 @@ def book_list(request):
 - 需要手动查询数据、调用序列化器和返回响应。
 - 适合简单、灵活的 API 接口。
 
-### 7.7.2 APIView 中使用序列化器
+### 7.6.2 APIView 中使用序列化器
 
 使用 `APIView` 编写类视图，通过 `get()`、`post()` 等方法处理不同的 HTTP 请求。
 
@@ -2529,7 +2907,7 @@ class BookListView(APIView):
 
 例如，后续可以增加 `post()` 方法，实现创建图书的功能。
 
-### 7.7.3 ModelViewSet 中使用序列化器
+### 7.6.3 ModelViewSet 中使用序列化器
 
 如果使用 `ModelViewSet`，DRF 可以自动提供常见的增删改查操作。
 
@@ -3316,7 +3694,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 
 # serializers.py
-from rest_framework.serializers import ModelSerializer
+from rest_framework import serializers
 
 
 # urls.py
