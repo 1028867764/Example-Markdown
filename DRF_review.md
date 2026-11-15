@@ -3711,3 +3711,482 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 from rest_framework.exceptions import AuthenticationFailed, APIException
 ```
+
+# 10. 生产环境部署【选学】
+
+## 10.1 为什么需要生产环境部署？
+
+在开发 Django 项目时，我们通常使用：
+
+```bash
+python manage.py runserver
+```
+
+但是，`runserver` 是 Django 自带的开发服务器，主要用于本地开发和调试，并不适合生产环境。
+
+生产环境通常需要更稳定的 Web 服务器和应用服务器，以便更好地处理多个用户同时访问的情况。
+
+常见部署组合：
+
+- Django：负责处理业务逻辑、数据库操作、API 请求等。
+- Waitress：负责运行 Django 应用，接收并发请求。
+- Nginx：负责接收外部 HTTP 请求、反向代理、提供静态文件。
+
+基本工作流程：
+
+```
+                  客户端
+                     |
+                     v
+                  Nginx
+                     |
+          +----------+----------+
+          |                     |
+          v                     v
+      静态文件              Waitress
+      CSS / JS                  |
+                                v
+                             Django
+                                |
+                                v
+                              MySQL
+```
+
+与直接使用 `runserver` 相比，这种部署方式更适合正式运行的后端。
+
+需要注意：使用 Waitress 和 Nginx 不代表并发能力一定达到某个固定数值，实际性能还取决于 CPU、内存、数据库、代码效率和服务器配置。
+
+## 10.2 修改 settings.py
+
+部署生产环境之前，需要检查 Django 项目的 `settings.py`。
+
+### 10.2.1 DEBUG
+
+`DEBUG` 用于控制 Django 是否开启调试模式。
+
+```python
+# 开发环境
+DEBUG = True
+
+# 生产环境
+DEBUG = False
+```
+
+生产环境必须关闭调试模式，避免向用户暴露错误详情、项目路径等敏感信息。
+
+### 10.2.2 ALLOWED_HOSTS
+
+`ALLOWED_HOSTS` 用于指定允许访问 Django 项目的域名或 IP 地址。
+
+```python
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "你的云服务器公网 IP",
+    "你的域名",     # 如果没买域名的话，可以不写
+]
+```
+
+### 10.2.3 STATIC_URL 和 STATIC_ROOT
+
+Django 项目中的静态文件包括：
+
+- CSS：网页样式文件。
+- JavaScript：网页交互文件。
+- 图片：网页使用的图片。
+- 字体：网页使用的字体文件。
+
+例如，Django Admin 自带 CSS、JavaScript 和图片等静态文件。
+
+配置：
+
+```python
+# 静态文件 URL 前缀
+STATIC_URL = "/static/"
+
+# 静态文件收集目录
+STATIC_ROOT = BASE_DIR / "staticfiles"
+```
+
+两个配置的作用不同：
+
+| 配置          | 作用                           |
+| ----------- | ---------------------------- |
+| STATIC_URL  | 指定浏览器访问静态文件时使用的 URL 前缀       |
+| STATIC_ROOT | 指定 collectstatic 收集静态文件的目标目录 |
+
+例如：
+
+```
+项目目录/
+    manage.py
+    staticfiles/
+        admin/
+            css/
+            js/
+            img/
+```
+
+这里的 `staticfiles` 就是 `STATIC_ROOT` 指定的目录。
+
+注意：`STATIC_URL` 可以使用 Django 的默认值，但建议显式配置为 `/static/`，便于理解和维护。
+
+### 10.2.4 CSRF_TRUSTED_ORIGINS
+
+`CSRF_TRUSTED_ORIGINS` 用于指定可信任的来源地址。
+
+当用户通过浏览器向 Django 提交 POST 等请求时，Django 会进行 CSRF 来源检查。
+
+例如：
+
+```python
+CSRF_TRUSTED_ORIGINS = [
+    "http://你的云服务器公网 IP",
+    "http://你的域名",     # 如果没买域名的话，可以不写
+]
+```
+
+注意：
+
+- 必须包含协议，例如 `http://` 或 `https://`。
+- 不要在这里填写 URL 路径。
+- 如果使用了非默认端口，也需要填写端口。
+- 如果网站使用 HTTPS，也应该配置对应的 HTTPS 来源。
+
+## 10.3 收集静态文件 collectstatic
+
+生产环境中，通常由 Nginx 直接提供静态文件，而不是让 Django 处理这些请求。
+
+因此，需要先将项目中的静态文件统一收集到 `STATIC_ROOT` 指定的目录。
+
+执行：
+
+```bash
+python manage.py collectstatic
+```
+
+执行后，Django 会自动收集：
+
+- Django Admin 自带的静态文件。
+- 已安装应用中的静态文件。
+- 项目中符合配置要求的静态文件。
+
+例如：
+
+```
+项目目录/
+    manage.py
+    staticfiles/
+        admin/
+            css/
+            js/
+            img/
+```
+
+以后如果修改了静态文件，需要重新执行：
+
+```bash
+python manage.py collectstatic
+```
+
+这样 Nginx 就可以从 `staticfiles` 目录读取静态资源。
+
+## 10.4 使用 Waitress 运行 Django
+
+### 10.4.1 Waitress 简介
+
+Waitress 是一个使用 Python 编写的 WSGI 应用服务器，可以用于运行 Django 项目。
+
+WSGI 是 Python Web 应用与 Web 服务器之间的一种通信规范。
+
+简单来说：
+
+- Django 提供 Web 应用。
+- Waitress 根据 WSGI 规范运行 Django。
+- Nginx 将用户请求转发给 Waitress。
+
+Waitress 支持多线程，可以同时处理多个请求。
+
+### 10.4.2 安装 Waitress
+
+在 Django 项目的虚拟环境中执行：
+
+```bash
+pip install waitress
+```
+
+### 10.4.3 启动 Waitress
+
+进入 Django 项目目录，执行：
+
+```bash
+waitress-serve --host=127.0.0.1 --port=8001 --threads=4 项目配置包名称.wsgi:application
+```
+
+参数说明：
+
+| 参数                             | 作用                    |
+| ------------------------------ | --------------------- |
+| `--host`                       | 指定监听地址                |
+| `--port`                       | 指定监听端口                |
+| `--threads`                    | 指定工作线程数量              |
+| `项目名称.wsgi:application` | 指定 Django 项目的 WSGI 应用 |
+
+其中：
+
+- `127.0.0.1` 表示只允许本机访问。
+- `8001` 表示 Waitress 使用的端口。
+- `4` 表示使用 4 个工作线程。
+
+启动成功后，Waitress 就会开始运行 Django 项目。
+
+可以通过以下地址测试：
+
+```
+http://127.0.0.1:8001/
+```
+
+注意：这里直接访问 Waitress 是为了测试。正式对外访问时，通常通过 Nginx 转发请求。
+
+### 10.4.4 停止 Waitress
+
+在运行 Waitress 的命令行窗口中按下：
+
+```bash
+Ctrl + C
+```
+
+即可停止服务器。
+
+## 10.5 使用 Nginx 部署
+
+### 10.5.1 Nginx 简介
+
+Nginx 是一个高性能的 Web 服务器，也可以作为反向代理服务器使用。
+
+在 Django 部署中，Nginx 主要负责：
+
+- 接收用户的 HTTP 请求。
+- 将动态请求转发给 Waitress。
+- 直接提供 CSS、JavaScript、图片等静态文件。
+
+为什么不让 Waitress 直接处理所有请求？
+
+因为 Nginx 更适合处理静态资源和大量客户端连接，可以减少 Waitress 的工作负担。
+
+### 10.5.2 下载与安装 Nginx
+
+Nginx 可以从官方网站下载 Windows 版本
+
+下载 Stable version（稳定版本）的 Windows 压缩包
+
+下载完成后，将压缩包解压到指定目录，例如：
+
+```
+D:\nginx\
+```
+
+解压后，主要文件结构如下：
+
+```
+nginx/
+├── conf/          # 配置文件目录
+│   └── nginx.conf # Nginx 主配置文件
+├── html/          # 默认网页文件目录
+├── logs/          # 日志目录
+└── nginx.exe      # Nginx 主程序
+```
+
+Nginx 不需要像普通软件一样执行安装向导，解压后即可使用。
+
+后续可以通过命令行启动 Nginx，并修改 `conf/nginx.conf` 配置文件。
+
+### 10.5.3 Nginx 常用命令
+
+进入 Nginx 安装目录，启动 Nginx：
+
+```bash
+start nginx
+```
+
+重新加载配置文件：
+
+```bash
+nginx -s reload
+```
+
+停止 Nginx：
+
+```bash
+nginx -s quit
+```
+
+强制停止 Nginx：
+
+```bash
+nginx -s stop
+```
+
+常用命令说明：
+
+| 命令                | 作用       |
+| ----------------- | -------- |
+| `start nginx`     | 启动 Nginx |
+| `nginx -s reload` | 重新加载配置   |
+| `nginx -s quit`   | 优雅停止     |
+| `nginx -s stop`   | 快速停止     |
+
+修改配置文件后，通常使用 `nginx -s reload` 使配置生效。
+
+### 10.5.4 Nginx 配置文件
+
+Nginx 的主要配置文件是：
+
+```
+nginx/conf/nginx.conf
+```
+
+打开后，可以找到：
+
+```
+http {
+    server {
+        listen       80;
+        server_name  localhost;
+    }
+}
+```
+
+### 10.5.5 配置反向代理
+
+例如：
+
+```
+server {
+    listen 端口;
+
+    server_name 你的云服务器公网 IP;
+
+    # 将动态请求转发给 Waitress
+    location / {
+        proxy_pass http://127.0.0.1:8001;
+
+    }
+}
+```
+
+这里：
+
+```
+proxy_pass http://127.0.0.1:8001;
+```
+
+表示将匹配到的请求转发给本机 8001 端口上的 Waitress。
+
+例如，用户访问：
+
+```
+http://你的云服务器公网 IP:端口/api/books/
+```
+
+Nginx 就会将请求转发给：
+
+```
+http://127.0.0.1:8001/api/books/
+```
+
+最终由 Django 处理请求。
+
+**注意： Nginx 监听的端口号禁止与 Waitress 监听的端口号一致，否则会起冲突！**
+
+### 10.5.6 配置静态文件
+
+在 `server` 中增加：
+
+```
+location /static/ {
+    alias D:/实际路径/;
+}
+```
+
+这里的路径需要替换成自己项目实际的 `staticfiles` 目录。
+
+例如：
+
+```
+D:/Projects/book_store/staticfiles/
+```
+
+注意：
+
+- `location /static/` 必须与 Django 的 `STATIC_URL` 对应。
+- `alias` 指向 `STATIC_ROOT` 对应的实际目录。
+- Windows 路径建议使用正斜杠 `/`。
+- `alias` 指向的目录应当已经通过 `collectstatic` 收集了静态文件。
+
+### 10.5.7 完整 Nginx 配置示例
+
+```
+server {
+    # Nginx 监听 80 端口
+    listen 80;
+
+    # 服务器公网 IP 或域名
+    server_name xxx.xx.xx.xxx;
+
+    # 处理静态文件
+    location /static/ {
+        alias D:/Projects/book_store/staticfiles/;
+    }
+
+    # 处理动态请求
+    location / {
+        proxy_pass http://127.0.0.1:8001;
+    }
+}
+```
+
+修改配置后，可以先检查配置文件：
+
+```bash
+nginx -t
+```
+
+如果显示配置测试成功，再执行：
+
+```bash
+nginx -s reload
+```
+
+## 10.6 完整部署流程示例
+
+实际部署时，可以按照以下顺序操作：
+
+1. 修改 Django 配置
+
+   设置 `DEBUG = False`，配置 `ALLOWED_HOSTS`、`STATIC_URL`、`STATIC_ROOT` 和 `CSRF_TRUSTED_ORIGINS`。
+2. 收集静态文件
+   ```bash
+   python manage.py collectstatic
+   ```
+3. 安装并启动 Waitress
+   ```bash
+   pip install waitress
+   ```
+   ```bash
+   waitress-serve --host=127.0.0.1 --port=8001 --threads=4 book_store.wsgi:application
+   ```
+4. 配置并启动 Nginx
+
+   配置反向代理和静态文件目录，然后执行：
+   ```bash
+   nginx -t
+   start nginx
+   ```
+5. 客户端发送请求
+
+## 10.7 性能的提升
+
+相比 Django 自带的 `runserver` 开发服务器，使用 Nginx + Waitress 部署后，能够更高效地处理并发请求，承受更多用户同时访问，例如几百个用户同时访问的场景。
+
+实际能够承受的用户数量取决于服务器配置、代码效率、数据库性能以及用户访问频率等因素。
