@@ -2,7 +2,7 @@
 
 ## 1.1 基本语法规则
 
-### 缩进（Indentation）
+### 1.1.1 缩进（Indentation）
 Python 用**缩进**（通常是4个空格）来表示代码块，而不是用 `{}`。
 
 ```python
@@ -20,7 +20,7 @@ print("程序结束")             # 这行不缩进，属于整个程序
 
 **注意**：同一代码块的缩进量必须完全一致，否则会报错 `IndentationError`。
 
-### 注释（# 和 """ """）
+### 1.1.2 注释（# 和 """ """）
 
 ```python
 # 这是一行注释，程序不会执行这行
@@ -35,7 +35,7 @@ print("Hello World")  # 这是在代码后面的行内注释
 print("多行注释示例")
 ```
 
-### 编码声明（通常写在文件最顶部）
+### 1.1.3 编码声明（通常写在文件最顶部）
 ```python
 # -*- coding: utf-8 -*-
 # 或者
@@ -46,7 +46,7 @@ print("支持中文输出没有问题")
 
 ## 1.2 变量与数据类型
 
-### 数字（int、float、complex）
+### 1.2.1 数字（int、float、complex）
 
 ```python
 # 整数 int
@@ -64,7 +64,26 @@ e = 1 + 2j
 print(e, type(e))        # (1+2j) <class 'complex'>
 ```
 
-### 字符串（str）—— 基础操作、格式化（f-string）
+### 1.2.2 高精度数字（Decimal）
+
+Python 提供了 `decimal` 模块中的 `Decimal` 类型，用于进行高精度小数计算，可以避免普通 `float` 浮点数可能出现的精度误差。
+
+```python
+from decimal import Decimal
+
+a = Decimal("0.1")
+b = Decimal("0.2")
+
+result = a + b
+
+print(result, type(result)) # 0.3 <class 'decimal.Decimal'>
+```
+
+注意：创建 `Decimal` 时，建议使用字符串作为参数，避免引入 `float` 原有的精度误差。
+
+`Decimal` 常用于金额计算、财务计算等对精度要求较高的场景。
+
+### 1.2.3 字符串（str）—— 基础操作、格式化（f-string）
 
 ```python
 name = "小明"
@@ -87,7 +106,7 @@ print(f"大家好，我叫{name}，今年{age}岁，身高{height}米")
 print(f"两年后我就是{age + 2}岁了")
 ```
 
-### 布尔值（bool）
+### 1.2.4 布尔值（bool）
 
 ```python
 is_adult = True
@@ -100,7 +119,7 @@ print(True + 5)     # 6
 print(False * 10)   # 0
 ```
 
-### 类型转换
+### 1.2.5 类型转换
 
 ```python
 age_str = "25"
@@ -114,6 +133,7 @@ print("我今年" + str(age) + "岁")
 
 # 浮点数转整数（向下取整）
 print(int(3.99))      # 3
+print(int(-3.99))      # -3
 
 # 任意类型转布尔值（非0、非空即为True）
 print(bool(0))        # False
@@ -188,20 +208,11 @@ height = float(input("请输入你的身高（米）："))
 print(f"你的身高是 {height} 米")
 ```
 
----
-
-**小练习（建议你自己动手敲一遍）：**
-
-1. 写一个程序，让用户输入姓名、年龄、身高，然后用f-string输出一句话。
-2. 计算用户输入的两个数字的加减乘除结果。
-
-
 # 2. 控制流与程序结构
-
 
 ## 2.1 条件判断
 
-### if、elif、else
+### 2.1.1 if、elif、else
 
 ```python
 # 基本 if 判断
@@ -219,7 +230,7 @@ else:
 print("判断结束")
 ```
 
-### 嵌套 if
+### 2.1.2 嵌套 if
 
 ```python
 age = int(input("请输入你的年龄："))
@@ -236,7 +247,7 @@ else:
     print("你还未成年，需要监护人陪同")
 ```
 
-### 三元表达式（一行 if-else，代码简洁）
+### 2.1.3 三元表达式（一行 if-else，代码简洁）
 
 ```python
 age = 20
@@ -254,7 +265,7 @@ print(f"你的状态：{status}")
 
 ## 2.2 循环语句
 
-### while 循环（当条件为True时重复执行）
+### 2.1.1 while 循环（当条件为True时重复执行）
 
 ```python
 # 基础 while 循环 - 打印 1 到 5
@@ -266,7 +277,7 @@ while i <= 5:
 print("循环结束")
 ```
 
-### for 循环（最常用）
+### 2.1.2 for 循环（最常用）
 
 ```python
 # 1. 用 range() 生成数字序列
@@ -280,6 +291,7 @@ for i in range(1, 11):       # 1到10
 print()  # 换行
 
 # 2. 遍历序列（列表、字符串等）
+# 遍历列表
 print("\n遍历列表：")
 fruits = ["苹果", "香蕉", "橙子", "葡萄"]
 for fruit in fruits:
@@ -291,7 +303,7 @@ for char in "Python":
     print(char)
 ```
 
-### break、continue、pass、else 子句
+### 2.1.3 continue、break、else 子句、pass
 
 ```python
 print("=== break 和 continue 示例 ===")
@@ -301,7 +313,7 @@ for i in range(1, 11):
         continue          # 跳过本次循环，i=3时不打印
     if i == 7:
         break             # 直接结束整个循环
-    print(i)
+    print(i)              # 1,2,4,5,6
 
 print("\n=== for ... else 示例 ===")
 # else 子句：当循环正常结束（没有被 break）时执行
@@ -320,7 +332,7 @@ print("pass不会影响程序运行")
 
 ## 2.3 异常处理基础
 
-### try...except...finally...else
+### 2.3.1 try...except...finally...else
 
 ```python
 print("=== 异常处理基础 ===")
@@ -348,22 +360,22 @@ finally:
     print("无论是否发生异常，这段代码都会执行（常用于关闭文件、释放资源）")
 ```
 
-### 常见异常类型示例
+### 2.3.2 常见异常类型示例
 
 ```python
 print("=== 常见异常类型演示 ===")
 
 # 1. ZeroDivisionError
-# try:
-#     print(10 / 0)
-# except ZeroDivisionError:
-#     print("不能除以0")
+try:
+   print(10 / 0)
+except ZeroDivisionError:
+   print("不能除以0")
 
 # 2. ValueError
-# try:
-#     num = int("abc")
-# except ValueError:
-#     print("无法将字符串转换为整数")
+try:
+    num = int("abc")
+except ValueError:
+    print("无法将字符串转换为整数")
 
 # 3. IndexError（索引超出范围）
 lst = [1, 2, 3]
@@ -386,15 +398,6 @@ except TypeError:
     print("不同类型不能直接相加")
 ```
 
----
-
-**小练习（强烈建议动手练习）：**
-
-1. 写一个程序：用户输入成绩，根据成绩输出“优秀、良好、及格、不及格”，使用 `if-elif-else`。
-2. 用 `while` 循环让用户反复输入数字，直到输入 `0` 时停止，并计算所有输入数字的平均值。
-3. 用 `for` 循环 + `range()` 打印九九乘法表。
-4. 写一个除法计算器，使用 `try-except` 处理除零和输入非数字的错误。
-
 # 3. 数据结构
 
 ## 3.1 列表（list）—— 最常用、最灵活的数据结构
@@ -406,7 +409,8 @@ numbers = [1, 2, 3, 4, 5]
 mixed = [1, "hello", 3.14, True]
 
 print(fruits)
-print(len(fruits))        # 列表长度
+length = len(fruits)      # 列表长度
+print(f"{length}")        # 4
 
 # 1. 查（访问元素）
 print(fruits[0])          # 第一个元素：苹果
@@ -420,42 +424,42 @@ print(fruits)             # ['苹果', '芒果', '橙子', '葡萄']
 # 3. 增（添加元素）
 fruits.append("西瓜")           # 在末尾添加
 fruits.insert(1, "草莓")        # 在指定位置插入
-print(fruits)
+print(fruits)                   # ['苹果', '草莓', '芒果', '橙子', '葡萄', '西瓜']
 
 # 4. 删（删除元素）
 fruits.remove("橙子")           # 删除指定值（第一个匹配的）
 popped = fruits.pop()           # 删除并返回最后一个元素
-print("被删除的元素:", popped)
+print("被删除的元素:", popped)   # 被删除的元素: 西瓜
 del fruits[0]                   # 根据索引删除
 
-# 列表推导式（非常常用！优雅又快速）
+# 5. 列表推导式（非常常用！优雅又快速）
 squares = [x**2 for x in range(1, 6)]
 print("平方列表:", squares)     # [1, 4, 9, 16, 25]
 
 even_numbers = [x for x in range(10) if x % 2 == 0]
-print("偶数列表:", even_numbers)
+print("偶数列表:", even_numbers)  # 偶数列表: [0, 2, 4, 6, 8]
 ```
 
 
 ## 3.2 元组（tuple）—— 不可变列表
 
 ```python
-# 创建元组
+# 1. 创建元组
 point = (3, 4)
 colors = ("red", "green", "blue")
 single = (5,)                  # 注意：单个元素元组必须加逗号！
 
 print(point)
-print(type(point))
+print(type(point))  # <class 'tuple'>
 
-# 元组不可变（不能修改、添加、删除）
+# 2. 元组不可变（不能修改、添加、删除）
 # point[0] = 10   # 这行会报错！
 
-# 元组打包与解包（非常实用）
+# 3. 元组打包与解包（非常实用）
 x, y = (10, 20)                # 解包
 print(f"x = {x}, y = {y}")
 
-# 多个变量一次性赋值
+# 4. 多个变量一次性赋值
 name, age, city = ("小明", 18, "上海")
 print(name, age, city)
 
@@ -474,7 +478,7 @@ student = {
 }
 
 print(student)
-print(student["name"])        # 通过键获取值
+print(student["name"])        # 通过键获取值（不推荐）
 
 # 1. 查
 print(student.get("age"))                    # 推荐使用get()，避免KeyError
@@ -489,11 +493,11 @@ print(student)
 student.pop("city")                          # 删除指定键并返回其值
 print(student)
 
-# setdefault() 方法：如果键不存在则设置默认值
+# 4. setdefault() 方法：如果键不存在则设置默认值
 student.setdefault("hobby", "学习Python")
 print(student)
 
-# 字典推导式
+# 5. 字典推导式
 squares_dict = {x: x**2 for x in range(6)}
 print(squares_dict)         # {0: 0, 1: 1, 2: 4, 3: 9, 4: 16, 5: 25}
 ```
@@ -501,16 +505,16 @@ print(squares_dict)         # {0: 0, 1: 1, 2: 4, 3: 9, 4: 16, 5: 25}
 ## 3.4 集合（set）—— 无序、不重复
 
 ```python
-# 创建集合
+# 1. 创建集合
 fruits_set = {"苹果", "香蕉", "橙子", "苹果"}   # 自动去重
 print(fruits_set)                               # {'苹果', '香蕉', '橙子'}
 
-# 添加和删除
+# 2. 添加和删除
 fruits_set.add("西瓜")
 fruits_set.remove("香蕉")       # 如果元素不存在会报错
 fruits_set.discard("不存在的水果")   # 推荐使用，不会报错
 
-# 集合运算（数学中的集合操作）
+# 3. 集合运算（数学中的集合操作）
 a = {1, 2, 3, 4}
 b = {3, 4, 5, 6}
 
@@ -525,62 +529,53 @@ print("对称差:", a ^ b)         # 两个集合中只在一个集合里的元�
 ```python
 s = "  Hello Python World!  "
 
-# 常用字符串方法
+# 1. 常用字符串方法
 print(s.strip())                    # 去除两端空格
 print(s.lower())                    # 转小写
 print(s.upper())                    # 转大写
 
 print("Python" in s)                # 判断是否包含子串
 
-# split() 和 join()
+# 2. split() 和 join()
 words = s.strip().split()           # 默认按空格分割
 print(words)                        # ['Hello', 'Python', 'World!']
 
 new_s = "-".join(words)
 print(new_s)                        # Hello-Python-World!
 
-# replace() 和 find()
+# 3. replace() 和 find()
 print(s.replace("Python", "编程")) 
 print(s.find("Python"))             # 返回第一次出现的位置，找不到返回-1
 
-# 格式化字符串（复习f-string）
+# 4. 格式化字符串（复习f-string）
 name = "小明"
 age = 18
 print(f"我是{name}，今年{age}岁")
 ```
-
----
-
-**小练习（建议立刻动手练习）：**
-
-1. 创建一个列表，存放5个你喜欢的水果，然后添加、删除、修改元素，并用列表推导式生成它们的长度列表。
-2. 用元组存储一个人的信息（姓名、年龄、城市），然后用解包方式打印出来。
-3. 创建一个字典存储学生信息，用 `get()` 获取成绩，如果没有则返回默认值“未考试”。
-4. 有两个列表 `[1,2,2,3,4,4,5]` 和 `[3,4,5,6,7]`，把它们转成集合后计算并集、交集和差集。
-5. 输入一句话，用 `split()` 分割成单词，再用 `join()` 用逗号连接起来。
-
 
 # 4. 函数
 
 ## 4.1 函数定义与调用（def）
 
 ```python
-# 定义一个最简单的函数
+# 1. 定义一个最简单的函数
 def say_hello():
     """这是一个打招呼函数"""
     print("你好！欢迎学习Python函数！")
 
-# 调用函数
-say_hello()
-say_hello()
+
+# 2. 调用函数
+say_hello()  # 你好！欢迎学习Python函数！
+say_hello()  # 你好！欢迎学习Python函数！
 
 
-# 带参数的函数
+# 3. 带参数的函数
 def greet(name):
     print(f"你好，{name}！今天也要加油哦~")
 
-greet("小明")
-greet("小红")
+
+greet("小明")  # 你好，小明！今天也要加油哦~
+greet("小红")  # 你好，小红！今天也要加油哦~
 ```
 
 ## 4.2 参数类型
@@ -602,23 +597,23 @@ introduce("小红", 20)                # 修改age
 introduce("小刚", 22, "上海")        # 全部指定
 
 
-# 3. 关键字参数（明确指定参数名，顺序可以打乱）
+# 3. keyword 参数（明确指定参数名，顺序可以打乱）
 introduce(age=19, name="小芳", city="广州")
 
 
 # 4. 可变参数
-# *args：接收任意数量的位置参数（打包成元组）
+# 4.1 *args：接收任意数量的位置参数（打包成元组）
 def sum_all(*args):
     total = 0
     for num in args:
         total += num
     return total
 
-print(sum_all(1, 2, 3))
-print(sum_all(10, 20, 30, 40, 50))
+print(sum_all(1, 2, 3))  # 输出: 6
+print(sum_all(10, 20, 30, 40, 50))  # 输出: 150
 
 
-# **kwargs：接收任意数量的关键字参数（打包成字典）
+# 4.2 **kwargs：接收任意数量的 keyword 参数（打包成字典）
 def show_info(**kwargs):
     for key, value in kwargs.items():
         print(f"{key}: {value}")
@@ -629,7 +624,7 @@ show_info(name="小明", age=18, hobby="编程", city="上海")
 ## 4.3 返回值（return）
 
 ```python
-# 有返回值的函数
+# 1. 有返回值的函数
 def multiply(x, y):
     return x * y
 
@@ -637,19 +632,19 @@ result = multiply(6, 7)
 print("6×7 =", result)
 
 
-# 返回多个值（实际上返回的是元组）
+# 2. 返回多个值（实际上返回的是元组）
 def get_student_info():
     name = "小红"
     age = 17
     score = 95
     return name, age, score          # 返回元组
 
-# 解包接收返回值
+# 3. 解包接收返回值
 n, a, s = get_student_info()
 print(f"姓名：{n}，年龄：{a}，成绩：{s}")
 
 
-# return 后面可以直接结束函数
+# 4. return 后面可以直接结束函数
 def check_age(age):
     if age < 18:
         return "未成年，不能上网吧"
@@ -659,33 +654,36 @@ def check_age(age):
 ## 4.4 作用域（LEGB 规则）
 
 ```python
-x = 100          # Global 全局变量
+x = 100  # Global 全局变量
+
 
 def outer():
-    x = 50       # Enclosing 闭包作用域
-    
+    x = 50  # Enclosing 闭包作用域
+
     def inner():
-        x = 10   # Local 局部变量
+        x = 10  # Local 局部变量
         print("inner中x =", x)
-    
-    inner()
+
+    inner()  # 输出: 10
     print("outer中x =", x)
 
-outer()
-print("全局x =", x)
+
+outer()  # 输出: 50
+print("全局x =", x)  # 输出: 100
 
 
 # global 关键字（修改全局变量）
 count = 0
 
 def increment():
-    global count      # 声明使用全局变量
+    global count  # 声明使用全局变量
     count += 1
     print("当前count =", count)
 
-increment()
-increment()
-print("最终count =", count)
+
+increment()  # 输出: 当前count = 1
+increment()  # 输出: 当前count = 2
+print("最终count =", count)  # 输出: 最终count = 2
 ```
 
 ## 4.5 匿名函数（lambda）
@@ -693,18 +691,19 @@ print("最终count =", count)
 ```python
 # lambda 表达式：用于定义简单的一行函数
 
-# 普通函数写法
+# 1. 普通函数写法
 def square(x):
     return x ** 2
 
-# lambda 写法
+# 2. lambda 写法
+# lambda 参数:表达式
 square_lambda = lambda x: x ** 2
 
 print(square(5))
 print(square_lambda(5))
 
 
-# 常用场景：配合 sorted、map 等
+# 3. 常用场景：配合 sorted、map 等
 students = [
     {"name": "小明", "score": 85},
     {"name": "小红", "score": 92},
@@ -712,11 +711,33 @@ students = [
 ]
 
 # 按成绩从高到低排序
-sorted_students = sorted(students, key=lambda s: s["score"], reverse=True)
+# sorted 函数的 key 指定排序依据
+# 默认升序，即 reverse = False
+sorted_students = sorted(students, key=lambda s: s["score"], reverse=True)  
+
 print(sorted_students)
+
+# [{'name': '小红', 'score': 92}, {'name': '小明', 'score': 85}, {'name': '小刚', 'score': 78}]
+```
+如果你想按照多个条件排序，例如，先按照成绩从高到低排序，成绩相同时再按照年龄从小到大排序：
+```python
+students = [
+    {"name": "小明", "score": 85, "age": 20},
+    {"name": "小红", "score": 92, "age": 19},
+    {"name": "小刚", "score": 85, "age": 18},
+]
+
+sorted_students = sorted(students, key=lambda s: (-s["score"], s["age"]))
+
+for student in sorted_students:
+    print(student["name"])
+
+# 小红
+# 小刚
+# 小明
 ```
 
-## 4.6 高阶函数（map、filter、reduce）
+## 4.6 高阶函数（map、filter）
 
 ```python
 # 1. map()：对序列中每个元素应用同一个函数
@@ -728,12 +749,6 @@ print("平方结果:", squared)
 # 2. filter()：过滤满足条件的元素
 even_numbers = list(filter(lambda x: x % 2 == 0, nums))
 print("偶数:", even_numbers)
-
-# 3. reduce()：从 functools 导入，对序列进行累积计算
-from functools import reduce
-
-product = reduce(lambda x, y: x * y, nums)   # 1*2*3*4*5
-print("累乘结果:", product)
 ```
 
 ## 4.7 递归函数基础
@@ -749,28 +764,9 @@ def factorial(n):
     return n * factorial(n - 1) # 递归调用
 
 print("5的阶乘 =", factorial(5))   # 120
-
-
-# 递归求和示例
-def sum_recursive(n):
-    if n == 0:
-        return 0
-    return n + sum_recursive(n - 1)
-
-print("1到10的和 =", sum_recursive(10))
 ```
 
----
-
-**小练习（推荐立刻练习）：**
-
-1. 写一个函数 `greet(name, times=3)`，能打印 `name` 指定的次数。
-2. 写一个函数，接收任意数量的数字，返回它们的平均值（用 `*args`）。
-3. 写一个函数 `calc(a, b, op="+")`，支持加减乘除（用默认参数 + if）。
-4. 用 `lambda` 和 `map` 把列表 `[1,2,3,4,5]` 转换成它们的立方列表。
-5. 用递归写一个函数，计算斐波那契数列第 n 项（可选挑战）。
-
-# 5. 模块与包
+# 5. 模块与包、库
 
 ## 5.1 模块导入（import、from...import）
 
@@ -797,51 +793,55 @@ print("π =", pi)
 
 ## 5.2 标准库常用模块
 
-### math 数学模块
+### 5.2.1 math 数学模块
 
 ```python
 import math
 
-print(math.ceil(3.2))      # 向上取整 → 4
-print(math.floor(3.8))     # 向下取整 → 3
+print(math.ceil(3.2))  # 向上取整 → 4
+print(math.floor(3.8))  # 向下取整 → 3
+print(math.ceil(-3.2))  # 向上取整 → -3
+print(math.floor(-3.8))  # 向下取整 → -4
 print(math.pow(2, 10))     # 2^10 = 1024.0
 print(math.factorial(5))   # 5! = 120
 ```
 
-### random 随机数模块
+### 5.2.2 random 随机数模块
 
 ```python
 import random
 
+# 1. 随机数
 print(random.random())           # 0.0 ~ 1.0 之间的随机浮点数
 print(random.randint(1, 10))     # 1~10之间的随机整数（包含两端）
 print(random.uniform(1.5, 10.5)) # 指定范围的随机浮点数
 
-# 随机从列表中选择
+# 2. 随机从列表中选择
 fruits = ["苹果", "香蕉", "橙子", "葡萄"]
 print("今天吃：", random.choice(fruits))
 
-# 随机打乱列表顺序
+# 3. 随机打乱列表顺序
 numbers = [1, 2, 3, 4, 5]
 random.shuffle(numbers)
 print("打乱后的列表：", numbers)
 ```
 
-### datetime 和 time 时间模块
+### 5.2.3 datetime 和 time 时间模块
 
 ```python
 from datetime import datetime, timedelta
 
-# 获取当前时间
+# 1. 获取当前时间
 now = datetime.now()
 print("当前时间:", now)
 print("年:", now.year, "月:", now.month, "日:", now.day)
 print("格式化输出:", now.strftime("%Y-%m-%d %H:%M:%S"))
 
-# 时间计算
+# 2. 时间计算
 tomorrow = now + timedelta(days=1)
 print("明天是:", tomorrow.strftime("%Y-%m-%d"))
 
+# 3. 暂停时间
 import time
 
 print("开始等待...")
@@ -849,72 +849,43 @@ time.sleep(2)                    # 程序暂停2秒
 print("等待结束！")
 ```
 
-### os 和 sys 系统相关模块
-
-```python
-import os
-import sys
-
-# os 模块
-print("当前工作目录:", os.getcwd())
-print("Python路径列表:", sys.path)
-
-# 创建文件夹（如果不存在）
-if not os.path.exists("test_folder"):
-    os.mkdir("test_folder")
-    print("文件夹创建成功")
-
-# sys 模块
-print("Python版本:", sys.version)
-print("当前平台:", sys.platform)
-```
-
-### json 数据交换格式
+### 5.2.4 json 数据交换格式
 
 ```python
 import json
 
-# 字典转JSON字符串
 student = {
     "name": "小明",
     "age": 18,
     "score": [95, 88, 92],
     "is_student": True
 }
-
+# 1. 字典转JSON字符串
+# ensure_ascii 控制是否将中文等字符转换成 Unicode 编码，默认为 True
+# indent 控制 JSON 的缩进空格数量，默认为 None
 json_str = json.dumps(student, ensure_ascii=False, indent=2)
 print("JSON字符串：\n", json_str)
 
-# JSON字符串转字典
+# 2. JSON字符串转字典
 data = json.loads(json_str)
 print("姓名:", data["name"])
 ```
 
-### collections 常用数据结构增强
+### 5.2.5 计数器
 
 ```python
-from collections import Counter, defaultdict, namedtuple
+from collections import Counter
 
-# Counter：计数器
 words = ["apple", "banana", "apple", "orange", "banana", "apple"]
 counter = Counter(words)
-print("单词出现次数:", counter)
-print("出现最多的单词:", counter.most_common(1))
+print(
+    "单词出现次数:", counter
+)  # 单词出现次数: Counter({'apple': 3, 'banana': 2, 'orange': 1})
 
-# defaultdict：带默认值的字典
-dd = defaultdict(list)
-dd["水果"].append("苹果")
-dd["水果"].append("香蕉")
-dd["蔬菜"].append("白菜")
-print(dd)
-
-# namedtuple：带名字的元组（更易读）
-Point = namedtuple("Point", ["x", "y"])
-p = Point(10, 20)
-print("坐标:", p.x, p.y)
+print("出现最多的单词:", counter.most_common(1))  # 出现最多的单词: [('apple', 3)]
 ```
 
-## 5.3 包（package）的概念与 `__init__.py`
+## 5.3 包（package）和模块（module）
 
 **包的目录结构示例：**
 
@@ -951,28 +922,30 @@ greet()
 - 可以控制 `from package import *` 时导入哪些模块
 - 可以执行包初始化代码
 
-## 5.4 第三方库安装（pip）
+## 5.4 第三方库安装
+**关于 `python -m pip`：**
 
-在**命令行（终端）**中执行以下命令（不要在Python代码里运行）：
+- `python`：调用 Python 解释器。
+- `-m`：让 Python 以模块的方式运行指定模块。
+- `pip`：指定运行 pip 模块。
 
+例如，`python -m pip install requests` 表示使用当前 Python 解释器运行 pip，并安装 requests。
+
+**建议优先使用 `python -m pip`，而不是直接使用 `pip`，因为电脑可能安装了多个 Python 版本，直接使用 `pip` 可能调用错误的 Python 环境。**
+
+在 **命令行（终端）** 中执行以下命令（不要在 Python 代码里运行）：
 ```bash
-# 基础命令
-pip install requests          # 安装最新版
-pip install requests==2.28.0  # 安装指定版本
-pip install "requests>=2.20"  # 安装大于等于某个版本
-
-# 常用操作
-pip list                      # 查看已安装的库
-pip show requests             # 查看某个库的信息
-pip uninstall requests        # 卸载库
-pip freeze > requirements.txt # 导出依赖列表
-pip install -r requirements.txt # 安装依赖文件中的所有库
+# 常用命令（推荐使用 python -m pip）
+python -m pip install requests             # 安装最新版
+python -m pip list                         # 查看已安装的库
+python -m pip show requests                # 查看某个库的信息
+python -m pip uninstall requests           # 卸载库
 ```
 
 **在代码中使用第三方库示例（安装后即可使用）：**
 
 ```python
-# 假设已经安装了 requests
+# 假设已经安装 requests
 import requests
 
 try:
@@ -983,15 +956,21 @@ except Exception as e:
     print("请求失败:", e)
 ```
 
----
+## 5.5 相关术语
+在 Python 中常见的相关术语：
 
-**小练习（建议动手练习）：**
+| 中文   | 英文                  | 说明                   |
+| ---- | ------------------- | -------------------- |
+| 库    | Library             | 可供程序使用的代码集合          |
+| 标准库  | Standard Library    | Python 自带的库          |
+| 第三方库 | Third-party Library | 由第三方开发的库             |
+| 模块   | Module              | 一个 `.py` 文件，或其他形式的模块 |
+| 包    | Package             | 用于组织多个模块的结构          |
+| 框架   | Framework           | 提供一套开发结构和规则的工具       |
 
-1. 使用 `random` 模块写一个猜数字小游戏（电脑随机生成1-100的数字，用户猜）。
-2. 使用 `datetime` 计算你距离2026年元旦还有多少天。
-3. 使用 `json` 把一个包含学生信息的字典保存成字符串，再转回字典打印。
-4. 使用 `Counter` 统计一句话中每个字符出现的次数。
-5. 创建一个自己的小工具包，里面放两个模块，一个负责计算，一个负责打印。
+另外，`pip` 全称通常解释为 **Pip Installs Packages**，是 Python 的包安装管理工具。
+
+注意：日常交流中，Library 和 Package 有时会混用，但严格来说，它们并不是完全相同的概念。
 
 # 6. 面向对象编程（OOP）
 
@@ -1027,12 +1006,12 @@ class Person:
         print("我在跑步！")
 
 
-# 创建对象并调用方法
+# 1. 创建对象并调用方法
 p = Person()
 p.eat()
 p.run()
 
-# 给对象动态添加实例属性（不推荐，后面会用 __init__ 统一管理）
+# 2. 给对象动态添加实例属性（不推荐，后面会用 __init__ 统一管理）
 p.name = "小明"
 p.age = 18
 print(p.name, p.age)
@@ -1090,7 +1069,7 @@ print("学校名称：", Student.school)
 ## 6.5 封装、继承、多态
 
 ```python
-# 封装：把属性和方法封装在类里，通过方法访问
+# 1. 封装：把属性和方法封装在类里，通过方法访问
 class BankAccount:
     def __init__(self, owner, balance=0):
         self.owner = owner
@@ -1113,7 +1092,7 @@ class BankAccount:
         return self.__balance
 
 
-# 继承：子类继承父类的属性和方法
+# 2. 继承：子类继承父类的属性和方法
 class Animal:
     def __init__(self, name):
         self.name = name
@@ -1137,7 +1116,7 @@ class Cat(Animal):
         print(f"{self.name} 喵喵喵～")
 
 
-# 多态：同一方法在不同对象上有不同表现
+# 3. 多态：同一方法在不同对象上有不同表现
 animals = [Dog("旺财", "金毛"), Cat("咪咪")]
 for animal in animals:
     animal.speak()          # 同样的方法调用，不同结果
@@ -1156,10 +1135,6 @@ class Book:
         """print(对象) 时调用"""
         return f"《{self.title}》 作者：{self.author}，共 {self.pages} 页"
     
-    def __repr__(self):
-        """在解释器中直接输入对象名时调用"""
-        return f"Book('{self.title}', '{self.author}', {self.pages})"
-    
     def __len__(self):
         """len(对象) 时调用"""
         return self.pages
@@ -1170,251 +1145,16 @@ print(book)           # 自动调用 __str__
 print(len(book))      # 自动调用 __len__
 ```
 
-## 6.7 静态方法与类方法
+## 6.7 静态方法
 
 ```python
 class MathUtils:
-    # 类属性
-    pi = 3.14159
-    
+
     @staticmethod
     def add(a, b):
         """静态方法：不需要 self，也不依赖类属性"""
         return a + b
-    
-    @classmethod
-    def show_pi(cls):
-        """类方法：第一个参数是 cls（代表当前类）"""
-        print(f"圆周率是：{cls.pi}")
-    
-    @classmethod
-    def create_from_string(cls, s):
-        """工厂方法示例"""
-        return cls(s)   # 返回一个新的实例
 
 
-print(MathUtils.add(10, 20))        # 直接用类名调用静态方法
-MathUtils.show_pi()
+print(MathUtils.add(10, 20))        # 直接用类名调用静态方法，无需创建实例
 ```
-
-## 6.8 抽象类基础（abc 模块，可选）
-
-```python
-from abc import ABC, abstractmethod
-
-class Shape(ABC):          # 抽象类
-    @abstractmethod
-    def area(self):
-        pass
-    
-    @abstractmethod
-    def perimeter(self):
-        pass
-
-
-class Rectangle(Shape):
-    def __init__(self, width, height):
-        self.width = width
-        self.height = height
-    
-    def area(self):
-        return self.width * self.height
-    
-    def perimeter(self):
-        return 2 * (self.width + self.height)
-
-
-rect = Rectangle(10, 5)
-print("矩形面积：", rect.area())
-```
-
-## 6.9 装饰器基础（@decorator）
-
-```python
-# 最简单的装饰器
-def timer(func):
-    """计时装饰器"""
-    import time
-    def wrapper(*args, **kwargs):
-        start = time.time()
-        result = func(*args, **kwargs)
-        end = time.time()
-        print(f"函数 {func.__name__} 执行了 {end-start:.4f} 秒")
-        return result
-    return wrapper
-
-
-@timer
-def slow_function():
-    time.sleep(1.5)
-    print("慢函数执行完毕")
-
-
-slow_function()
-```
-
----
-
-**小练习（强烈建议动手练习）：**
-
-1. 创建一个 `Student` 类，包含姓名、年龄、成绩属性，并有一个方法打印学生信息。
-2. 创建 `Teacher` 类继承 `Person` 类，增加 `subject` 属性和 `teach()` 方法。
-3. 实现一个 `Phone` 类，使用私有属性 `__battery`，提供 `charge()` 和 `get_battery()` 方法。
-4. 写一个 `Vector` 类，支持 `+` 加法运算（实现 `__add__` 魔术方法）。
-5. 使用装饰器写一个函数，打印“开始执行”和“执行结束”。
-
-
-# 7. 文件操作与数据持久化
-
-## 7.1 文本文件读写（open、with 语句）
-
-```python
-# ==================== 1. 写入文件 ====================
-
-# 方式一：普通写法（推荐使用 with）
-file = open("test.txt", "w", encoding="utf-8")
-file.write("Hello Python!\n")
-file.write("欢迎学习文件操作\n")
-file.close()                     # 必须手动关闭文件
-
-# 方式二：推荐写法 —— with 语句（自动关闭文件）
-with open("test.txt", "w", encoding="utf-8") as f:
-    f.write("第一行内容\n")
-    f.write("第二行内容\n")
-    f.writelines(["第三行\n", "第四行\n"])
-
-print("文件写入完成！")
-
-
-# ==================== 2. 读取文件 ====================
-
-print("\n=== 读取整个文件 ===")
-with open("test.txt", "r", encoding="utf-8") as f:
-    content = f.read()           # 读取全部内容
-    print(content)
-
-print("\n=== 逐行读取 ===")
-with open("test.txt", "r", encoding="utf-8") as f:
-    for line in f:               # 推荐方式，内存友好
-        print(line.strip())      # strip() 去掉换行符
-
-print("\n=== 读取所有行到列表 ===")
-with open("test.txt", "r", encoding="utf-8") as f:
-    lines = f.readlines()
-    print(lines)
-```
-
-## 7.2 二进制文件（图片、视频等）
-
-```python
-# 复制图片示例（二进制读写）
-with open("source.jpg", "rb") as f_in:      # rb = read binary
-    data = f_in.read()
-
-with open("copy.jpg", "wb") as f_out:       # wb = write binary
-    f_out.write(data)
-
-print("图片复制完成！")
-```
-
-## 7.3 CSV、JSON 文件处理
-
-### JSON 文件处理（最常用）
-
-```python
-import json
-
-# ==================== 写入 JSON ====================
-students = [
-    {"name": "小明", "age": 18, "score": 95},
-    {"name": "小红", "age": 17, "score": 92},
-    {"name": "小刚", "age": 19, "score": 88}
-]
-
-# 写入 JSON 文件
-with open("students.json", "w", encoding="utf-8") as f:
-    json.dump(students, f, ensure_ascii=False, indent=4)
-
-print("JSON 文件写入完成！")
-
-
-# ==================== 读取 JSON ====================
-with open("students.json", "r", encoding="utf-8") as f:
-    data = json.load(f)
-
-print("读取到的学生数据：")
-for stu in data:
-    print(f"姓名：{stu['name']}，年龄：{stu['age']}，成绩：{stu['score']}")
-```
-
-### CSV 文件处理（推荐使用 csv 模块）
-
-```python
-import csv
-
-# ==================== 写入 CSV ====================
-with open("students.csv", "w", encoding="utf-8", newline="") as f:
-    writer = csv.writer(f)
-    # 写入表头
-    writer.writerow(["姓名", "年龄", "成绩"])
-    # 写入数据
-    writer.writerow(["小明", 18, 95])
-    writer.writerow(["小红", 17, 92])
-    writer.writerow(["小刚", 19, 88])
-
-print("CSV 文件写入完成！")
-
-
-# ==================== 读取 CSV ====================
-with open("students.csv", "r", encoding="utf-8") as f:
-    reader = csv.reader(f)
-    for row in reader:
-        print(row)
-```
-
-## 7.4 上下文管理器（contextlib）
-
-```python
-from contextlib import contextmanager
-import time
-
-# ==================== 自定义上下文管理器 ====================
-@contextmanager
-def timer(name="默认计时器"):
-    """一个简单的计时上下文管理器"""
-    start = time.time()
-    print(f"【{name}】开始执行...")
-    try:
-        yield                     # yield 之前是进入时执行，之后是退出时执行
-    finally:
-        end = time.time()
-        print(f"【{name}】执行结束！耗时 {end - start:.4f} 秒")
-
-
-# 使用自定义上下文管理器
-with timer("测试任务"):
-    time.sleep(1.2)
-    print("正在执行重要操作...")
-
-
-# ==================== 文件操作中的 with（其实就是上下文管理器） ====================
-with open("test.txt", "r", encoding="utf-8") as f:
-    content = f.read()
-# 文件在这里已经自动关闭，无需手动 close
-```
-
----
-
-**小练习（建议立刻动手练习）：**
-
-1. 创建一个 `diary.txt` 文件，写入今天的日期和一句话，然后再读取并打印出来。
-2. 把下面学生信息保存为 `students.json` 文件：
-   ```python
-   students = [
-       {"id": 1, "name": "张三", "age": 20},
-       {"id": 2, "name": "李四", "age": 21}
-   ]
-   ```
-3. 读取上面的 `students.json`，再追加一个新学生后重新保存。
-4. 使用 `csv` 模块创建一个 `scores.csv`，包含姓名、数学、英语、总分四列，并写入至少3条数据。
-5. 使用 `@contextmanager` 写一个上下文管理器 `file_writer(filename)`，自动在进入时打印“开始写入”，退出时打印“写入完成”。
