@@ -7,10 +7,10 @@
 
 ```bash
 # 安装 Django
-pip install django
+python -m pip install django
 
 # 安装 Django REST framework（DRF）
-pip install djangorestframework
+python -m pip install djangorestframework
 
 # 查看 Django 版本，确认安装成功
 python -m django --version
@@ -1288,18 +1288,7 @@ Student.objects.all()[:5]
 # 取第 2 至第 5 条记录（切片右侧不包含）
 Student.objects.all()[1:5]
 ```
-### 5.4.4 指定返回字段
-```python
-# values()：返回字典组成的 QuerySet
-Student.objects.values("id", "name", "age")
-
-# values_list()：返回元组组成的 QuerySet
-Student.objects.values_list("name", "age")
-
-# 只返回 name 字段组成的元组
-Student.objects.values_list("name", flat=True)
-```
-### 5.4.5 创建数据
+### 5.4.4 创建数据
 ```python
 # 方法一：create()，创建并保存，返回模型实例
 student = Student.objects.create(
@@ -1316,7 +1305,7 @@ student = Student(
 )
 student.save()
 ```
-### 5.4.6 修改数据
+### 5.4.5 修改数据
 ```python
 # 批量修改：将所有 18 岁学生的年龄改为 19
 Student.objects.filter(age=18).update(age=19)
@@ -1330,7 +1319,7 @@ student.save()
 student.age = 22
 student.save(update_fields=["age"])
 ```
-### 5.4.7 删除数据
+### 5.4.6 删除数据
 ```python
 # 删除符合条件的学生
 Student.objects.filter(age__lt=18).delete()
@@ -1342,7 +1331,7 @@ student.delete()
 # 注意：以下操作会删除全部学生记录，请勿随意执行！
 # Student.objects.all().delete()
 ```
-### 5.4.8 统计与判断
+### 5.4.7 统计与判断
 ```python
 # 统计学生总数
 total = Student.objects.count()
@@ -1358,7 +1347,7 @@ age_counts = Student.objects.values("age").annotate(
     total=Count("id")
 )
 ```
-### 5.4.9 获取或创建、获取或更新
+### 5.4.8 获取或创建、获取或更新
 ```python
 # 如果 email 对应的学生存在，就获取；否则创建
 student, created = Student.objects.get_or_create(
@@ -1381,7 +1370,7 @@ student, created = Student.objects.update_or_create(
     },
 )
 ```
-### 5.4.10 跨表查询
+### 5.4.9 跨表查询
 
 Django ORM 使用双下划线 `__` 实现跨表查询，可以通过模型之间的关联关系，访问其他模型的字段。
 
@@ -1470,7 +1459,7 @@ class ArticleAdmin(admin.ModelAdmin):
 - `author__department__name`：连续跨越多个模型关系。
 - `articles__title__icontains`：可反向查询。
 
-### 5.4.11 批量操作
+### 5.4.10 批量操作
 ```python
 # 批量创建：一次提交多个模型对象
 Student.objects.bulk_create([
@@ -1487,7 +1476,7 @@ for student in students:
 # 将修改后的多个对象批量更新到数据库
 Student.objects.bulk_update(students, ["age"])
 ```
-### 5.4.12 常见使用原则
+### 5.4.11 常见使用原则
 ```python
 # filter()：返回 QuerySet，适合查多条或零条数据
 students = Student.objects.filter(age__gte=18)
@@ -1508,7 +1497,7 @@ updated_count = Student.objects.filter(age=20).update(age=21)
 # delete()：删除符合条件的记录，返回删除统计信息
 # deleted_count, details = Student.objects.filter(age=100).delete()
 ```
-### 5.4.13 总结
+### 5.4.12 总结
 ```python
 # 常用指令
 
@@ -1549,7 +1538,7 @@ Model.objects.filter(字段名__isnull=True) # 查询字段为 NULL 的
 Model.objects.filter(模型1的字段名__模型2的字段名="可连续跨表查询、可反向查询")
 ```
 
-## 5.5 @api_view([])
+## 5.5 FBV 装饰器
 ### 5.5.1 初识 @api_view([])
 `@api_view([])` 是 Django REST Framework（DRF）提供的 FBV 装饰器，用于将普通 Django 函数视图转换为 DRF API 视图，并指定允许使用的 HTTP 请求方法。
 
@@ -1750,7 +1739,7 @@ GET /api/students/?gender=男
 在 VS Code 的终端中执行：
 
 ```bash
-pip install django-filter
+python -m pip install django-filter
 ```
 
 `django-filter` 是一个独立的第三方库，需要单独安装。
@@ -3009,7 +2998,7 @@ JWT 是 JSON Web Token 的缩写，常用于 Web API 的用户身份认证。
 在终端执行：
 
 ```bash
-pip install djangorestframework-simplejwt
+python -m pip install djangorestframework-simplejwt
 ```
 
 ### 8.2.2 第二步：配置认证方式
@@ -3912,7 +3901,7 @@ Waitress 支持多线程，可以同时处理多个请求。
 在 Django 项目的虚拟环境中执行：
 
 ```bash
-pip install waitress
+python -m pip install waitress
 ```
 
 ### 10.4.3 启动 Waitress
@@ -4171,7 +4160,7 @@ nginx -s reload
    ```
 3. 安装并启动 Waitress
    ```bash
-   pip install waitress
+   python -m pip install waitress
    ```
    ```bash
    waitress-serve --host=127.0.0.1 --port=8001 --threads=4 book_store.wsgi:application
