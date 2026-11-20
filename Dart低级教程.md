@@ -1494,6 +1494,33 @@ String checkAge(int age) {
 print(checkAge(20)); // 成年人
 ```
 
+在 Flutter 中，你还会经常看到函数返回值的类型是 `Widget`（组件）
+
+```dart
+// Widget 表示函数返回一个界面组件
+Widget buildTitle() {
+  return Text('Hello Flutter');
+}
+
+// 在 Flutter 界面中使用
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    body: Center(
+      child: buildTitle(),
+    ),
+  );
+}
+```
+
+**补充说明：**
+
+- `Widget`：Flutter 中所有界面组件的基础类型之一。
+- `buildTitle()`：返回一个 `Text` 组件。
+- Flutter 中经常将界面拆分成多个函数或组件，以便复用和管理代码。
+
+**注意：** `Widget` 是返回值类型，`Text` 是具体返回的组件类型。
+
 ## 3.4 匿名函数与箭头函数
 
 **1. 匿名函数（Anonymous Function）**
@@ -1975,6 +2002,55 @@ void main() {
 - 命名构造函数使用 `类名.名称()` 的形式定义。
 - 一个类可以定义多个命名构造函数。
 - 不同构造函数可以用于不同场景。
+
+**示例：使用 fromJson() 将 JSON 数据反序列化为对象**
+
+```dart
+class Person {
+  String name;
+  int age;
+
+  // 普通构造函数
+  Person(this.name, this.age);
+
+  // 命名构造函数：从 JSON 数据创建对象
+  Person.fromJson(Map<String, dynamic> json)
+      : name = json['name'],
+        age = json['age'];
+}
+
+void main() {
+  // 模拟从服务器获取的 JSON 数据
+  Map<String, dynamic> json = {
+    'name': '张三',
+    'age': 18,
+  };
+
+  // 将 JSON 数据转换为 Person 对象
+  Person person = Person.fromJson(json);
+
+  print(person.name); // 张三
+  print(person.age);  // 18
+}
+```
+
+**补充说明：**
+
+- `fromJson` 是一种常见的命名构造函数名称，并不是 Dart 规定的固定名称。
+- `Map<String, dynamic>` 用于接收 JSON 对象转换后的 Map 数据。
+- `Person.fromJson(json)` 会根据 JSON 中的字段创建一个 `Person` 对象。
+
+**Flutter 开发中的常见用法：**
+
+实际项目中，经常使用 `fromJson()` 将服务器 API 返回的数据反序列化为 Dart 模型对象。例如：
+
+```dart
+// 将服务器返回的 JSON 字符串转换为 Map
+Map<String, dynamic> json = jsonDecode(response.body);
+
+// 将 Map 转换为 User 对象
+User user = User.fromJson(json);
+```
 
 ### 4.2.5 常量构造函数（Constant Constructor）
 
