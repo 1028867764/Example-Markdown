@@ -628,7 +628,10 @@ class Demo:
 ```
 你可以把 `self.` 理解成，给 Python 解释器加的导盲犬
 
-## 3.5 `choices` 下拉枚举
+## 3.5 下拉枚举选项
+
+### 3.5.1 choices
+
 作用：枚举选项，用于后台下拉选择
 - `IntegerChoices`：数据库存数字，搭配 `IntegerField`
 - `TextChoices`：数据库存字符串，搭配 `CharField`，必须写 `max_length`
@@ -655,6 +658,37 @@ class Article(models.Model):
     status = models.IntegerField(choices=Status.choices, default=Status.DRAFT)
     typ = models.CharField(max_length=1, choices=Type.choices, default=Type.N)
 ```
+
+### 3.5.2 客户端提交
+
+当模型字段设置了 `choices` 时，客户端通过 POST 请求提交数据，应该使用枚举中定义的实际值（value），而不是显示文字（label）。
+
+例如，上面的 `Article` 模型：
+
+```json
+{
+    "status": 1,
+    "typ": "f"
+}
+```
+
+其中：
+
+- `status`：提交数字 `1`，对应 `Status.PUB`（发布）。
+- `typ`：提交字符串 `"f"`，对应 `Type.F`（比喻）。
+
+**注意：** 不要提交显示文字：
+
+```json
+{
+    "status": "发布",
+    "typ": "比喻"
+}
+```
+
+因为 `"发布"` 和 `"比喻"` 是供后台或客户端显示的文字，并不是数据库实际存储的值。
+
+如果使用 DRF 的 `ModelSerializer`，还会自动根据模型的 `choices` 对提交的值进行验证，不符合选项的值无法通过验证。
 
 ## 3.6 `@property` 只读属性
 > 作用：把一个方法伪装成**属性**，调用的时候不用加括号 `()`；只做读取，一般不写保存逻辑。
