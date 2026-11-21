@@ -514,9 +514,9 @@ python manage.py migrate
 - verbose_name_plural = "字段的复数显示名称"
 - related_name = "内Model反向查询外Model"
 
-一般来说，外Model查询内Model，只需"OuterModel.关联字段"就能拿到实例；
+一般来说，外Model查询内Model，只需 `OuterModel.关联字段` 就能拿到实例；
 
-而反之却不能直接查询，需写成"InnerModel.related_name"的样式才能达到目的。
+而反之却不能直接查询，需写成 `InnerModel.related_name.all()` 的样式才能达到目的。
 
 常见于 `ForeignKey`，例如之前的：
 ```python
@@ -551,8 +551,8 @@ print(publisher.name)
 
 publisher = Publisher.objects.get(id=1)
 
-# 获取该出版社的所有图书
-books = publisher.books.all() # InnerModel.related_name
+# 获取该出版社的所有图书，别忘了加 ".all()"
+books = publisher.books.all() # InnerModel.related_name.all()
 
 for book in books:
     print(book.title)
