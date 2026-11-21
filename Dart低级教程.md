@@ -1043,7 +1043,7 @@ if (isLogin) {
 
 `switch` 用于根据一个值匹配不同的情况，从而执行对应的代码。
 
-Dart 3 的现代 `switch` 语句**不再需要** `break;`，每个分支默认独立执行，不会自动贯穿。
+Dart 3 的现代 `switch` 语句**不再需要** `break;`，每一个非空 `case` 分支默认独立执行，执行完毕后会自动结束，不会自动贯穿。
 
 **1. switch 语句**
 
@@ -2615,6 +2615,8 @@ void main() {
 
 ## 4.10 枚举（Enum）
 
+### 4.10.1 定义与使用枚举
+
 **枚举（Enumeration）** 是一种特殊的数据类型，用于定义一组固定的常量选项。
 
 使用 `enum` 关键字定义枚举，适合表示状态、类型、方向等固定选项。
@@ -2645,9 +2647,10 @@ void main() {
 - 枚举的每个选项都是一个固定的枚举值。
 - 使用 `枚举名.选项名` 访问枚举值。
 - 可以通过 `.name` 获取枚举值的名称。
-- 枚举还提供 `values` 属性，可以获取该枚举的所有选项。
 
-**遍历枚举值**
+### 4.10.2 遍历枚举值
+
+使用 `.values` 可以获取枚举的所有选项，并通过 for-in 循环遍历。
 
 ```dart
 enum Direction {
@@ -2664,6 +2667,45 @@ void main() {
   }
 }
 ```
+
+输出结果：
+
+```text
+north
+south
+east
+west
+```
+
+### 4.10.3 枚举与 switch
+
+枚举经常与 `switch` 配合使用，根据不同的枚举值执行不同的代码。
+
+```dart
+enum Status {
+  pending,
+  success,
+  failed,
+}
+
+void main() {
+  Status status = Status.success;
+
+  switch (status) {
+    case Status.pending:
+      print('正在处理中');
+    case Status.success:
+      print('操作成功');
+    case Status.failed:
+      print('操作失败');
+  }
+}
+```
+
+**注意：**
+- `switch` 可以根据不同的枚举值执行对应的分支。
+- Dart 3.10 及以上版本支持省略 `case` 中的枚举类型前缀。
+- 每个非空 `case` 分支执行完毕后会自动结束，不需要使用 `break`。
 
 # 第五章 异步编程
 
