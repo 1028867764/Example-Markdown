@@ -14,7 +14,7 @@ Dart 具有以下特点：
 
 Dart 不仅可以用于 Flutter 移动应用开发，还可以用于 Windows、macOS、Linux 桌面应用以及 Web 应用开发。
 
-## 1.2 注释与输出
+## 1.2 在写代码之前
 
 ### 1.2.1 注释
 
@@ -57,6 +57,16 @@ print('我今年 $age 岁');
 // 表达式也可以放在 ${} 中
 print('明年我 ${age + 1} 岁');
 ```
+
+### 1.2.3 程序入口
+
+```dart
+void main() {
+  print('Hello, World!');
+}
+```
+
+`main()` 是 Dart 程序的唯一入口，无返回值时自动推断为 `void`。
 
 ## 1.3 变量与常量
 
@@ -1797,12 +1807,39 @@ void main() {
 }
 ```
 
+**4. 私有命名参数**
+
+从 Dart 3.12 开始，构造函数支持私有命名参数（Private Named Parameters）。使用 `this._变量名` 可以直接初始化私有变量，而在类外部调用构造函数时，不需要使用下划线。
+
+```dart
+class Person {
+  // 私有变量
+  final String _name;
+  final int _age;
+
+  // 私有命名参数
+  Person({
+    required this._name,
+    required this._age,
+  });
+}
+
+void main() {
+  // 外部传参时不需要使用下划线
+  var person = Person(name: '小明', age: 18);
+}
+```
+
 需要注意：
 
 - 默认情况下，成员都是公有的。
 - 名称以 `_` 开头的变量、函数和类都是私有的。
 - Dart 的私有访问控制是以库（Library）为单位，而不是以类或文件为单位。
 - 同一个库中的其他文件也可以访问私有成员，前提是这些文件属于同一个库。
+- 类内部仍然使用 `_name`、`_age` 访问私有变量。
+- 类外部调用构造函数时，使用 `name`、`age` 传参。
+- 这种语法不会改变变量的私有属性，外部仍然不能直接访问 `_name` 和 `_age`。
+- 私有命名参数需要 Dart 3.12 或更高版本。
 
 ## 3.10 闭包（Closure）
 
