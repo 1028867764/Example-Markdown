@@ -206,7 +206,46 @@ const scores = [1, 2, 3];
 - `final`：不能重新赋值。
 - `const`：编译期确定，不能重新赋值，其常量对象也不能修改。
 
+
 ### 1.3.4 late
+
+`late` 用于延迟初始化变量，即声明变量时暂时不赋值，等到后续需要时再进行初始化。
+
+**1. late 与 final 的区别**
+
+`final` 用于声明只能赋值一次的变量。如果声明 `final` 变量时没有赋值，就必须在构造函数初始化列表、构造函数体等允许的初始化位置完成初始化，否则会报错。
+
+```dart
+void main() {
+  // final 必须完成初始化
+  final String username = 'Tom';
+
+  // final String name; // 报错：未初始化就结束了声明
+
+  // 可空类型可以不立即赋值，默认值为 null
+  final String? nickname;
+
+  print(username);
+  print(nickname); // null
+}
+```
+
+如果希望变量保持 `final` 的特性（只能赋值一次），但又希望延迟初始化，就可以使用 `late final`：
+
+```dart
+void main() {
+  late final String username;
+
+  // 后续再赋值
+  username = 'Tom';
+
+  print(username);
+
+  // username = 'Jack'; // 报错：final 变量只能赋值一次
+}
+```
+
+**2. 延迟初始化**
 
 `late` 用于延迟初始化变量，即声明变量时暂时不赋值，等到后续需要时再进行初始化。
 
@@ -237,11 +276,14 @@ void main() {
 }
 ```
 
-注意：
+**注意：**
 
 - `late` 变量必须在使用之前完成初始化。
 - 如果尚未初始化就访问变量，会产生运行时异常。
+- `late final` 可以延迟初始化，但只能赋值一次。
 - `late` 常用于初始化需要依赖其他对象或暂时无法获取的数据。
+
+**记住：** `final` 强调只能赋值一次，`late` 强调延迟初始化，两者可以组合使用。
 
 ### 1.3.5 编译期与运行期
 
@@ -1442,9 +1484,9 @@ introduce(name: '小明');
 introduce(age: 20, name: '小红');
 ```
 
-- `required`：表示该命名参数必须传入。
+- `required`：表示该命名参数必须传入，即「必需命名参数」。
 - `=`：可以为参数设置默认值。
-- 命名参数默认是可以不传入的，除非使用 `required`。
+- 命名参数默认是可以不传入的，即「可选命名参数」，除非使用 `required`。
 
 **4. 混合写法**
 
@@ -2425,7 +2467,7 @@ void main() {
 
 `super` 用于访问父类的成员（属性和方法），也可以用于调用父类的构造函数。
 
-**1. 访问父类成员**
+**1. `super.成员名`**
 
 使用 `super.成员名` 可以访问父类中定义的属性或方法。
 
@@ -2454,9 +2496,9 @@ void main() {
 }
 ```
 
-**2. 调用父类构造函数**
+**2. `: super(参数)`**
 
-使用 `super(参数)` 可以调用父类的生成式构造函数；如果父类使用了命名构造函数，则使用 `super.名称(参数)` 调用。
+使用 `super(参数)` 可以调用父类的生成式构造函数，从而初始化父类中定义的属性。如果父类使用了命名构造函数，则使用 `super.名称(参数)` 调用。
 
 ```dart
 class Animal {
@@ -2468,7 +2510,8 @@ class Animal {
 class Dog extends Animal {
   int age;
 
-  // 调用父类构造函数，初始化父类的 name 属性
+  // 先调用父类构造函数，初始化父类的 name 属性
+  // 再初始化子类自己的 age 属性
   Dog(String name, this.age) : super(name);
 }
 
@@ -2481,10 +2524,59 @@ void main() {
 ```
 
 **注意：**
-- `super.成员名` 用于访问父类的属性或方法。
-- `super(参数)` 用于调用父类的生成式构造函数。
+
+- 子类继承父类后，父类的属性也属于子类对象的一部分，需要在创建对象时完成初始化。
+- `super(参数)` 用于调用父类的生成式构造函数，将参数传递给父类构造函数，以初始化父类属性。
 - `super.名称(参数)` 用于调用父类的命名构造函数。
-- 调用父类构造函数时，通常在子类构造函数的初始化列表中使用 `super()`。
+- `super()` 通常写在子类构造函数的初始化列表中。
+
+**3. `{super.key}`**
+
+在 Flutter 开发中，自定义组件时经常会看到 `super.key` 这种写法。这是 Dart 2.17 引入的语法糖。
+
+Flutter 的父类 `Widget` 中定义了一个 `key` 属性，用于标识和区分组件。Flutter 在更新组件树时，会结合 Widget 的类型和 Key 判断组件是否能够匹配，尤其是在列表增删、组件位置调整等场景中，合理使用 Key 有助于避免组件状态错乱。
+
+简化来看，Flutter 的 `Widget` 类大致是这样定义的：
+
+```dart
+abstract class Widget {
+  // 定义 key 属性
+  final Key? key;
+
+  // key 是一个可选命名参数
+  const Widget({this.key});
+}
+```
+
+可以看到，父类 `Widget` 的构造函数使用了 `{}`，因此 `key` 是一个可选命名参数，而不是位置参数。
+
+子类可以通过 `super.key` 接收外部传入的命名参数，并将其传递给父类构造函数，从而初始化父类的 `key` 属性。
+
+```dart
+// 新写法（Dart 2.17+）
+class MyWidget extends StatelessWidget {
+  const MyWidget({super.key});
+}
+
+// 等价的旧写法
+class MyWidget extends StatelessWidget {
+  const MyWidget({Key? key}) : super(key: key);
+}
+```
+
+外部创建组件时，可以通过命名参数传入 `key`：
+
+```dart
+MyWidget(key: ValueKey(1));
+```
+
+**注意：**
+
+- `super.key` 属于生成式构造函数的参数语法，采用命名参数形式。
+- `super.key` 的作用是将外部传入的 `key` 传递给父类，初始化父类的 `key` 属性。
+- 自定义 Flutter Widget 时，通常建议始终添加 `super.key`，即使暂时用不到，也能保留外部传入 Key 的能力，养成良好的编码习惯。
+
+**记住：** `super.key` 本质上就是一种简写，等价于 `Key? key` 加上 `: super(key: key)`。
 
 ### 4.6.3 方法重写（Method Overriding）
 
@@ -2983,7 +3075,6 @@ Future<void> main() async {
 **小结：** `async` 负责声明异步函数，`await` 负责等待异步操作完成。是否使用 `await`，以及将 `await` 放在哪里，会直接影响异步任务的执行顺序。
 
 ## 5.3 Stream（略）
-## 5.4 Isolate（略）
 
 # 第六章 异常处理
 
